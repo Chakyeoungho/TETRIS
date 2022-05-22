@@ -2,14 +2,14 @@
 #define __CONSTANT_H__
 
 enum Tetromino {
+	M_Tet,
 	MITet,
 	MJTet,
 	MLTet,
 	MOTet,
 	MSTet,
 	MTTet,
-	MZTet,
-	Tet
+	MZTet
 };
 
 // 게임 상태
