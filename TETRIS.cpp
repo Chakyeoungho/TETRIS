@@ -96,7 +96,7 @@ int main()
 	srand((unsigned int)time(NULL));
 
 	SetTimer(1, 800, FrameProc);
-	GameData data = { { { { 0, TETROMINOSIZE },     { TETROMINOSIZE, TETROMINOSIZE }, { TETROMINOSIZE * 2, TETROMINOSIZE }, { TETROMINOSIZE * 3, TETROMINOSIZE }             },     // I
+	GameData data = { { { { 0, TETROMINOSIZE },     { TETROMINOSIZE, TETROMINOSIZE }, { TETROMINOSIZE * 2, TETROMINOSIZE }, { TETROMINOSIZE * 3, TETROMINOSIZE } },     // I
 						{ { 0, 0 },                 { 0, TETROMINOSIZE },             { TETROMINOSIZE, TETROMINOSIZE },     { TETROMINOSIZE * 2, TETROMINOSIZE } },     // J
 						{ { TETROMINOSIZE * 2, 0 }, { 0, TETROMINOSIZE },             { TETROMINOSIZE, TETROMINOSIZE },     { TETROMINOSIZE * 2, TETROMINOSIZE } },     // L
 						{ { TETROMINOSIZE, 0 },     { TETROMINOSIZE * 2, 0 },         { TETROMINOSIZE, TETROMINOSIZE },     { TETROMINOSIZE * 2, TETROMINOSIZE } },     // O
@@ -108,7 +108,7 @@ int main()
 
 	pGameData ap_data = (pGameData)GetAppData();
 	setImage();
-	setTetromino(ap_data);
+	setTetromino(ap_data); 
 	drawTetris(ap_data);
 
 	ShowDisplay();
