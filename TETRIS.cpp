@@ -8,7 +8,7 @@
 #pragma comment(lib, "winmm.lib")
 
 typedef struct _GameData {
-	POINT Tetrominoes[8][4];
+	POINT Tetrominoes[7][4];
 	POINT drawTet[4];
 	POINT move;
 	WORD game_state;
@@ -114,8 +114,7 @@ int main()
 	srand((unsigned int)time(NULL));
 
 	SetTimer(1, 800, FrameProc);
-	GameData data = { { { { 0, }, },                                    // _
-						{ { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },     // I
+	GameData data = { { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },     // I
 						{ { 0, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },     // J
 						{ { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },     // L
 						{ { 1, 0 }, { 2, 0 }, { 1, 1 }, { 2, 1 } },     // O
@@ -128,6 +127,7 @@ int main()
 	pGameData ap_data = (pGameData)GetAppData();
 	setImage();
 	setTetromino(ap_data);
+	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * FIELD_Y_NUM * FIELD_X_NUM);
 	setData(ap_data);
 	drawTetris(ap_data);
 
@@ -139,7 +139,6 @@ void setImage()
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
-	ap_data->tetromino_image[M_Tet] = LoadImageGP(".\\Tetromino\\M_Tet.png");    // Background
 	ap_data->tetromino_image[MITet] = LoadImageGP(".\\Tetromino\\MITet.png");    // I
 	ap_data->tetromino_image[MJTet] = LoadImageGP(".\\Tetromino\\MJTet.png");    // J
 	ap_data->tetromino_image[MLTet] = LoadImageGP(".\\Tetromino\\MLTet.png");    // L
@@ -147,6 +146,7 @@ void setImage()
 	ap_data->tetromino_image[MSTet] = LoadImageGP(".\\Tetromino\\MSTet.png");    // S
 	ap_data->tetromino_image[MTTet] = LoadImageGP(".\\Tetromino\\MTTet.png");    // T
 	ap_data->tetromino_image[MZTet] = LoadImageGP(".\\Tetromino\\MZTet.png");    // Z
+	ap_data->tetromino_image[M_Tet] = LoadImageGP(".\\Tetromino\\M_Tet.png");    // Background
 }
 
 void setTetromino(pGameData p_data)
