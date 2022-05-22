@@ -13,8 +13,7 @@ typedef struct _GameData {
 	POINT move;
 	BYTE playfield[FIELD_Y_NUM][FIELD_X_NUM];
 	BYTE currTetromino;
-	void *tetromino_image[7];
-	void *background_image;
+	void *tetromino_image[8];
 } GameData, *pGameData;
 
 void setImage();
@@ -115,7 +114,7 @@ int main()
 						{ { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 } },     // S
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },     // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },   // Z
-					  { { 0, }, }, { 3, 8 }, { { 0, }, }, 0, { 0, }, 0 };
+					  { { 0, }, }, { 3, 8 }, { { 0, }, }, 0, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
@@ -140,8 +139,7 @@ void setImage()
 	ap_data->tetromino_image[MSTet] = LoadImageGP(".\\Tetromino\\MSTet.png");    // S
 	ap_data->tetromino_image[MTTet] = LoadImageGP(".\\Tetromino\\MTTet.png");    // T
 	ap_data->tetromino_image[MZTet] = LoadImageGP(".\\Tetromino\\MZTet.png");    // Z
-
-	ap_data->background_image = LoadImageGP(".\\Background\\Tet.png");    // Background
+	ap_data->tetromino_image[Tet]   = LoadImageGP(".\\Tetromino\\Tet.png");      // Background
 }
 
 void setTetromino(pGameData p_data)
@@ -182,14 +180,7 @@ void drawTetris(pGameData p_data)
 
 	for (int y = FREESPACE_NUM; y < FIELD_Y_NUM; y++) {
 		for (int x = 0; x < FIELD_X_NUM; x++) {
-			switch (p_data->playfield[y][x]) {
-			case MITet: case MJTet: case MLTet: case MOTet: case MSTet: case MTTet: case MZTet:
-				DrawImageGP(p_data->tetromino_image[p_data->playfield[y][x]], x * TETROMINO_SIZE, (y - FREESPACE_NUM) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
-				break;
-			default:
-				DrawImageGP(p_data->background_image, x * TETROMINO_SIZE, (y - FREESPACE_NUM) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
-				break;
-			}
+			DrawImageGP(p_data->tetromino_image[p_data->playfield[y][x]], x * TETROMINO_SIZE, (y - FREESPACE_NUM) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
 		}
 	}
 
