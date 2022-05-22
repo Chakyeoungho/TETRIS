@@ -11,6 +11,7 @@ typedef struct _GameData {
 	POINT Tetrominoes[7][4];
 	POINT drawTet[4];
 	POINT move;
+	WORD game_state;
 	BYTE playfield[FIELD_Y_NUM][FIELD_X_NUM];
 	BYTE currTetromino;
 	void *tetromino_image[8];
@@ -28,15 +29,17 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
-	if (ap_data->drawTet[0].y + ap_data->move.y < FIELD_Y_NUM - 1 &&
-		ap_data->drawTet[1].y + ap_data->move.y < FIELD_Y_NUM - 1 &&
-		ap_data->drawTet[2].y + ap_data->move.y < FIELD_Y_NUM - 1 &&
-		ap_data->drawTet[3].y + ap_data->move.y < FIELD_Y_NUM - 1) {
-		removeData(ap_data);
-		ap_data->move.y++;
-		setData(ap_data);
+	if (ap_data->game_state == PLAYGAME) {
+		if (ap_data->drawTet[0].y + ap_data->move.y < FIELD_Y_NUM - 1 &&
+			ap_data->drawTet[1].y + ap_data->move.y < FIELD_Y_NUM - 1 &&
+			ap_data->drawTet[2].y + ap_data->move.y < FIELD_Y_NUM - 1 &&
+			ap_data->drawTet[3].y + ap_data->move.y < FIELD_Y_NUM - 1) {
+			removeData(ap_data);
+			ap_data->move.y++;
+			setData(ap_data);
+		}
+		drawTetris(ap_data);
 	}
-	drawTetris(ap_data);
 }
 
 // 사용자가 메시지를 직접 처리할 때 사용하는 함수
@@ -47,51 +50,55 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 	if (a_message_id == WM_KEYDOWN) {  // 키보드의 버튼이 눌러졌을 때
 		// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
 		// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
-		switch (wParam)
-		{
-		case VK_UP:
-			removeData(p_data);
-			spin(p_data);
-			setData(p_data);
-			drawTetris(p_data);
-			break;
-		case VK_DOWN:   // 아래쪽 버튼
-			if (p_data->drawTet[0].y + p_data->move.y < FIELD_Y_NUM - 1 &&
-				p_data->drawTet[1].y + p_data->move.y < FIELD_Y_NUM - 1 &&
-				p_data->drawTet[2].y + p_data->move.y < FIELD_Y_NUM - 1 &&
-				p_data->drawTet[3].y + p_data->move.y < FIELD_Y_NUM - 1) {
+
+		if (p_data->game_state == PLAYGAME) {
+			switch (wParam)
+			{
+			case VK_UP:
 				removeData(p_data);
-				p_data->move.y++;
+				spin(p_data);
 				setData(p_data);
 				drawTetris(p_data);
+				break;
+			case VK_DOWN:   // 아래쪽 버튼
+				if (p_data->drawTet[0].y + p_data->move.y < FIELD_Y_NUM - 1 &&
+					p_data->drawTet[1].y + p_data->move.y < FIELD_Y_NUM - 1 &&
+					p_data->drawTet[2].y + p_data->move.y < FIELD_Y_NUM - 1 &&
+					p_data->drawTet[3].y + p_data->move.y < FIELD_Y_NUM - 1) {
+					removeData(p_data);
+					p_data->move.y++;
+					setData(p_data);
+					drawTetris(p_data);
+				}
+				break;
+			case VK_LEFT:   // 왼쪽 버튼
+				if (p_data->drawTet[0].x + p_data->move.x >= 1 &&
+					p_data->drawTet[1].x + p_data->move.x >= 1 &&
+					p_data->drawTet[2].x + p_data->move.x >= 1 &&
+					p_data->drawTet[3].x + p_data->move.x >= 1) {
+					removeData(p_data);
+					p_data->move.x--;
+					setData(p_data);
+					drawTetris(p_data);
+				}
+				break;
+			case VK_RIGHT:   // 오른쪽 버튼
+				if (p_data->drawTet[0].x + p_data->move.x < FIELD_X_NUM - 1 &&
+					p_data->drawTet[1].x + p_data->move.x < FIELD_X_NUM - 1 &&
+					p_data->drawTet[2].x + p_data->move.x < FIELD_X_NUM - 1 &&
+					p_data->drawTet[3].x + p_data->move.x < FIELD_X_NUM - 1) {
+					removeData(p_data);
+					p_data->move.x++;
+					setData(p_data);
+					drawTetris(p_data);
+				}
+				break;
+			default:
+				break;
 			}
-			break;
-		case VK_LEFT:   // 왼쪽 버튼
-			if (p_data->drawTet[0].x + p_data->move.x >= 1 &&
-				p_data->drawTet[1].x + p_data->move.x >= 1 &&
-				p_data->drawTet[2].x + p_data->move.x >= 1 &&
-				p_data->drawTet[3].x + p_data->move.x >= 1) {
-				removeData(p_data);
-				p_data->move.x--;
-				setData(p_data);
-				drawTetris(p_data);
-			}
-			break;
-		case VK_RIGHT:   // 오른쪽 버튼
-			if (p_data->drawTet[0].x + p_data->move.x < FIELD_X_NUM - 1 &&
-				p_data->drawTet[1].x + p_data->move.x < FIELD_X_NUM - 1 &&
-				p_data->drawTet[2].x + p_data->move.x < FIELD_X_NUM - 1 &&
-				p_data->drawTet[3].x + p_data->move.x < FIELD_X_NUM - 1) {
-				removeData(p_data);
-				p_data->move.x++;
-				setData(p_data);
-				drawTetris(p_data);
-			}
-			break;
-		default:
-			break;
 		}
 	}
+
 	return 0;
 }
 
@@ -114,7 +121,7 @@ int main()
 						{ { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 } },     // S
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },     // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },   // Z
-					  { { 0, }, }, { 3, 8 }, { { 0, }, }, 0, { 0, } };
+					  { { 0, }, }, { 3, 8 }, PLAYGAME, { { 0, }, }, 0, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
