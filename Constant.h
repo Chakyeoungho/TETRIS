@@ -18,9 +18,10 @@ enum Tetromino {
 #define GAMEOVER  1002
 
 // 표준 크기
-#define FIELD_X_NUM 10
-#define FIELD_Y_NUM 28
-#define FREESPACE_NUM 8
-#define TETROMINO_SIZE 30
+#define FIELD_X_NUM (10)
+#define FIELD_Y_NUM (28)
+#define FREESPACE_NUM (FIELD_Y_NUM - (20))
+#define TETROMINO_SIZE (30)
+#define LINEINFO (1)
 
 #endif // !__CONSTANT_H__
