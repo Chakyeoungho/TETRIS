@@ -17,13 +17,14 @@ typedef struct _GameData {
 	void *tetromino_image[8];
 } GameData, *pGameData;
 
-void setImage();
-void setTetromino(pGameData p_data);
-bool isNotFloor(pGameData p_data);
-void setData(pGameData p_data);
-void removeData(pGameData p_data);
-void drawTetris(pGameData p_data);
-void spin(pGameData p_data);
+void setImage();                        // 이미지 파일 설정
+void setTetromino(pGameData p_data);    // 테트리미노 설정
+bool isNotFloor(pGameData p_data);      // 테트리미노가 바닥에 닿았는지 확인
+bool canSRS(pGameData p_data);          // SRS(Super Rotation System) 확인
+void setData(pGameData p_data);         // 테트리스 데이터 설정
+void removeData(pGameData p_data);      // 테트리스 데이터 제거
+void drawTetris(pGameData p_data);      // 테트리스 그리기
+void spin(pGameData p_data);            // 회전
 
 TIMER FrameProc(NOT_USE_TIMER_DATA)
 {
@@ -55,7 +56,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 		if (p_data->game_state == PLAYGAME) {
 			switch (wParam)
 			{
-			case VK_UP:
+			case VK_UP:   // 위쪽 버튼
 				removeData(p_data);
 				spin(p_data);
 				setData(p_data);
@@ -128,6 +129,9 @@ int main()
 	setImage();
 	setTetromino(ap_data);
 	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * FIELD_Y_NUM * (FIELD_X_NUM + LINEINFO));
+	for (int i = 0; i < FIELD_Y_NUM; i++) {
+		ap_data->playfield[i][FIELD_X_NUM] = 10;
+	}
 	setData(ap_data);
 	drawTetris(ap_data);
 
@@ -135,6 +139,7 @@ int main()
 	return 0;
 }
 
+// 이미지 파일 설정
 void setImage()
 {
 	pGameData ap_data = (pGameData)GetAppData();
@@ -149,6 +154,7 @@ void setImage()
 	ap_data->tetromino_image[M_Tet] = LoadImageGP(".\\Tetromino\\M_Tet.png");    // _
 }
 
+// 테트리미노 설정
 void setTetromino(pGameData p_data)
 {
 	p_data->currTetromino = (BYTE)(rand() % 7);
@@ -156,43 +162,85 @@ void setTetromino(pGameData p_data)
 	p_data->moveTet = { 3, 8 };
 }
 
+// 테트리미노가 바닥에 닿았는지 확인
 bool isNotFloor(pGameData p_data)
 {
+	BYTE tempArr[4] = { 0, };
+
 	for (int i = 0; i < 4; i++) {
 		if (p_data->drawTet[i].y + p_data->moveTet.y >= FIELD_Y_NUM - 1)
 			return false;
+
+		if (tempArr[p_data->drawTet[i].x] < p_data->drawTet[i].y) {
+			tempArr[p_data->drawTet[i].x] = p_data->drawTet[i].y;
+		}
 	}
 
 	for (int i = 0; i < 4; i++) {
-		;
+		if (p_data->playfield[tempArr[p_data->drawTet[i].x] + p_data->moveTet.y + 1][p_data->drawTet[i].x + p_data->moveTet.x] < M_Tet)
+			return false;
 	}
 
 	return true;
 }
 
+// SRS(Super Rotation System) 확인
+bool canSRS(pGameData p_data)
+{
+	LONG tempX, tempY;
+
+	if (p_data->currTetromino > MITet && p_data->currTetromino != MOTet) {
+		for (int i = 0; i < 4; i++) {
+			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
+			tempY = 2 - p_data->drawTet[i].x + p_data->moveTet.y;
+
+			if (tempX < 0 || tempX >(FIELD_X_NUM - 1) || tempY > (FIELD_Y_NUM - 1))
+				return false;
+		}
+	}
+	else if (p_data->currTetromino == MITet) {
+		for (int i = 0; i < 4; i++) {
+			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
+			tempY = 3 - p_data->drawTet[i].x + p_data->moveTet.y;
+
+			if (tempX < 0 || tempX >(FIELD_X_NUM - 1) || tempY > (FIELD_Y_NUM - 1))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+// 테트리스 데이터 설정
 void setData(pGameData p_data)
 {
 	for (int i = 0; i < 4; i++) {
 		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x] = p_data->currTetromino;
+
+		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][FIELD_X_NUM]--;
 	}
 }
 
+// 테트리스 데이터 제거
 void removeData(pGameData p_data)
 {
 	for (int i = 0; i < 4; i++) {
 		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x] = M_Tet;
+
+		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][FIELD_X_NUM]++;
 	}
 }
 
+// 테트리스 그리기
 void drawTetris(pGameData p_data)
 {
 	Clear();
 
 	for (int y = 8; y < FIELD_Y_NUM; y++) {
-		for (int x = 0; x < FIELD_X_NUM + LINEINFO; x++) {
+		for (int x = 0; x < FIELD_X_NUM; x++) {
 			TextOut(x * 12 + 450, (y - FREESPACE_NUM) * 12 + 50, "%d", p_data->playfield[y][x]);
 		}
-		TextOut(130 + 450, (y - FREESPACE_NUM) * 12 + 50, "%d", y);
+		TextOut(130 + 470, (y - FREESPACE_NUM) * 12 + 50, "%d", p_data->playfield[y][FIELD_X_NUM]);
 	}
 
 	for (int y = FREESPACE_NUM; y < FIELD_Y_NUM; y++) {
@@ -204,34 +252,20 @@ void drawTetris(pGameData p_data)
 	ShowDisplay();
 }
 
+// 회전
 void spin(pGameData p_data)
 {
+	if (!canSRS(p_data)) return;
+
 	LONG temp;
-	LONG tempX, tempY;
 
 	if (p_data->currTetromino > MITet && p_data->currTetromino != MOTet) {
-		for (int i = 0; i < 4; i++) {
-			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
-			tempY = 2 - p_data->drawTet[i].x + p_data->moveTet.y;
-
-			if (tempX < 0 || tempX >(FIELD_X_NUM - 1) || tempY > (FIELD_Y_NUM - 1))
-				return;
-		}
-
 		for (int i = 0; i < 4; i++) {
 			temp = p_data->drawTet[i].x;
 			p_data->drawTet[i].x = p_data->drawTet[i].y;
 			p_data->drawTet[i].y = 2 - temp;
 		}
 	} else if (p_data->currTetromino == MITet) {
-		for (int i = 0; i < 4; i++) {
-			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
-			tempY = 3 - p_data->drawTet[i].x + p_data->moveTet.y;
-
-			if (tempX < 0 || tempX >(FIELD_X_NUM - 1) || tempY > (FIELD_Y_NUM - 1))
-				return;
-		}
-
 		for (int i = 0; i < 4; i++) {
 			temp = p_data->drawTet[i].x;
 			p_data->drawTet[i].x = p_data->drawTet[i].y;
