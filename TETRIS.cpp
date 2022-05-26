@@ -12,7 +12,7 @@ typedef struct _GameData {
 	POINT drawTet[4];
 	POINT moveTet;
 	WORD game_state;
-	BYTE playfield[FIELD_Y_NUM][FIELD_X_NUM + 1];
+	BYTE playfield[FIELD_Y_NUM][FIELD_X_NUM + LINEINFO];
 	BYTE currTetromino;
 	void *tetromino_image[8];
 } GameData, *pGameData;
@@ -21,6 +21,7 @@ void setImage();                        // 이미지 파일 설정
 void setTetromino(pGameData p_data);    // 테트리미노 설정
 bool isNotFloor(pGameData p_data);      // 테트리미노가 바닥에 닿았는지 확인
 bool canSRS(pGameData p_data);          // SRS(Super Rotation System) 확인
+void cascade(pGameData p_data);         // 캐스캐이드, 줄이 꽉차면 삭제
 void setData(pGameData p_data);         // 테트리스 데이터 설정
 void removeData(pGameData p_data);      // 테트리스 데이터 제거
 void drawTetris(pGameData p_data);      // 테트리스 그리기
@@ -36,6 +37,7 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 			ap_data->moveTet.y++;
 			setData(ap_data);
 		} else  {
+			cascade(ap_data);
 			setTetromino(ap_data);
 			setData(ap_data);
 			drawTetris(ap_data);
@@ -108,7 +110,7 @@ ON_MESSAGE(NULL, NULL, NULL, NULL, NULL, OnUserMsg)
 int main()
 {
 	waveOutSetVolume(0, (DWORD)0x25002500);    // 사운드 볼륨 조정 오른쪽 왼쪽
-	//sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생
+	sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생
 
 	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * (FIELD_Y_NUM - FREESPACE_NUM));
 
@@ -172,7 +174,7 @@ bool isNotFloor(pGameData p_data)
 			return false;
 
 		if (tempArr[p_data->drawTet[i].x] < p_data->drawTet[i].y) {
-			tempArr[p_data->drawTet[i].x] = p_data->drawTet[i].y;
+			tempArr[p_data->drawTet[i].x] = (BYTE)p_data->drawTet[i].y;
 		}
 	}
 
@@ -209,6 +211,22 @@ bool canSRS(pGameData p_data)
 	}
 
 	return true;
+}
+
+// 캐스캐이드, 줄이 꽉차면 삭제
+void cascade(pGameData p_data)
+{
+	int i;
+
+	for (int y = 0; y < FIELD_Y_NUM; y++) {
+		if (p_data->playfield[y][FIELD_X_NUM] == 0) {
+			i = y;
+			while (p_data->playfield[i][FIELD_X_NUM] != 10) {
+				memcpy(p_data->playfield[i], p_data->playfield[i - 1], sizeof(BYTE) * (FIELD_X_NUM + LINEINFO));
+				i--;
+			}
+		}
+	}
 }
 
 // 테트리스 데이터 설정
