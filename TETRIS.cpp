@@ -12,7 +12,7 @@ typedef struct _GameData {
 	POINT drawTet[4];
 	POINT moveTet;
 	WORD game_state;
-	BYTE playfield[FIELD_Y_NUM][FIELD_X_NUM + LINEINFO];
+	BYTE playfield[FIELD_Y_NUM + DEADLINE][FIELD_X_NUM + LINEINFO];
 	BYTE currTetromino;
 	void *tetromino_image[8];
 } GameData, *pGameData;
@@ -20,6 +20,7 @@ typedef struct _GameData {
 void setImage();                        // 이미지 파일 설정
 void setTetromino(pGameData p_data);    // 테트리미노 설정
 bool isNotFloor(pGameData p_data);      // 테트리미노가 바닥에 닿았는지 확인
+bool isNotWall(pGameData p_data, int direction);       // 테트리미노가 벽에 닿았는지 확인
 bool canSRS(pGameData p_data);          // SRS(Super Rotation System) 확인
 void cascade(pGameData p_data);         // 캐스캐이드, 줄이 꽉차면 삭제
 void setData(pGameData p_data);         // 테트리스 데이터 설정
@@ -54,7 +55,6 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 	if (a_message_id == WM_KEYDOWN) {  // 키보드의 버튼이 눌러졌을 때
 		// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
 		// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
-
 		if (p_data->game_state == PLAYGAME) {
 			switch (wParam)
 			{
@@ -73,10 +73,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				}
 				break;
 			case VK_LEFT:   // 왼쪽 버튼
-				if (p_data->drawTet[0].x + p_data->moveTet.x >= 1 &&
-					p_data->drawTet[1].x + p_data->moveTet.x >= 1 &&
-					p_data->drawTet[2].x + p_data->moveTet.x >= 1 &&
-					p_data->drawTet[3].x + p_data->moveTet.x >= 1) {
+				if (isNotWall(p_data, LEFT)) {
 					removeData(p_data);
 					p_data->moveTet.x--;
 					setData(p_data);
@@ -84,10 +81,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				}
 				break;
 			case VK_RIGHT:   // 오른쪽 버튼
-				if (p_data->drawTet[0].x + p_data->moveTet.x < FIELD_X_NUM - 1 &&
-					p_data->drawTet[1].x + p_data->moveTet.x < FIELD_X_NUM - 1 &&
-					p_data->drawTet[2].x + p_data->moveTet.x < FIELD_X_NUM - 1 &&
-					p_data->drawTet[3].x + p_data->moveTet.x < FIELD_X_NUM - 1) {
+				if (isNotWall(p_data, RIGHT)) {
 					removeData(p_data);
 					p_data->moveTet.x++;
 					setData(p_data);
@@ -95,6 +89,15 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				}
 				break;
 			case VK_SPACE:
+				removeData(p_data);
+				while (isNotFloor(p_data)) {
+					p_data->moveTet.y++;
+				}
+				setData(p_data);
+				cascade(p_data);
+				setTetromino(p_data);
+				setData(p_data);
+				drawTetris(p_data);
 				break;
 			default:
 				break;
@@ -112,7 +115,7 @@ int main()
 	waveOutSetVolume(0, (DWORD)0x25002500);    // 사운드 볼륨 조정 오른쪽 왼쪽
 	sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생
 
-	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * (FIELD_Y_NUM - FREESPACE_NUM));
+	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * (FIELD_Y_NUM + DEADLINE - FREESPACE_NUM));
 
 	srand((unsigned int)time(NULL));
 
@@ -130,9 +133,9 @@ int main()
 	pGameData ap_data = (pGameData)GetAppData();
 	setImage();
 	setTetromino(ap_data);
-	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * FIELD_Y_NUM * (FIELD_X_NUM + LINEINFO));
-	for (int i = 0; i < FIELD_Y_NUM; i++) {
-		ap_data->playfield[i][FIELD_X_NUM] = 10;
+	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + DEADLINE) * (FIELD_X_NUM + LINEINFO));
+	for (int y = 0; y < FIELD_Y_NUM + DEADLINE; y++) {
+		ap_data->playfield[y][FIELD_X_NUM] = 10;
 	}
 	setData(ap_data);
 	drawTetris(ap_data);
@@ -170,7 +173,7 @@ bool isNotFloor(pGameData p_data)
 	BYTE tempArr[4] = { 0, };
 
 	for (int i = 0; i < 4; i++) {
-		if (p_data->drawTet[i].y + p_data->moveTet.y >= FIELD_Y_NUM - 1)
+		if (p_data->drawTet[i].y + p_data->moveTet.y >= FIELD_Y_NUM + DEADLINE - 1)
 			return false;
 
 		if (tempArr[p_data->drawTet[i].x] < p_data->drawTet[i].y) {
@@ -186,6 +189,45 @@ bool isNotFloor(pGameData p_data)
 	return true;
 }
 
+// 테트리미노가 벽에 닿았는지 확인
+bool isNotWall(pGameData p_data, int direction)
+{
+	BYTE tempArr[4] = { 0, };
+
+	if (direction == LEFT) {
+		memset(tempArr, UCHAR_MAX, sizeof(BYTE) * 4);
+		for (int i = 0; i < 4; i++) {
+			if (p_data->drawTet[i].x + p_data->moveTet.x < 1)
+				return false;
+
+			if (tempArr[p_data->drawTet[i].y] > p_data->drawTet[i].x) {
+				tempArr[p_data->drawTet[i].y] = (BYTE)p_data->drawTet[i].x;
+			}
+		}
+
+		for (int i = 0; i < 4; i++) {
+			if (p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][tempArr[p_data->drawTet[i].y] + p_data->moveTet.x + 1] < M_Tet);
+				//return false;
+		}
+	} else if (direction == RIGHT) {
+		for (int i = 0; i < 4; i++) {
+			if (p_data->drawTet[i].x + p_data->moveTet.x >= FIELD_X_NUM - 1)
+				return false;
+
+			if (tempArr[p_data->drawTet[i].y] < p_data->drawTet[i].x) {
+				tempArr[p_data->drawTet[i].y] = (BYTE)p_data->drawTet[i].x;
+			}
+		}
+
+		for (int i = 0; i < 4; i++) {
+			if (p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][tempArr[p_data->drawTet[i].y] + p_data->moveTet.x + 1] < M_Tet)
+				return false;
+		}
+	}
+
+	return true;
+}
+
 // SRS(Super Rotation System) 확인
 bool canSRS(pGameData p_data)
 {
@@ -196,7 +238,7 @@ bool canSRS(pGameData p_data)
 			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
 			tempY = 2 - p_data->drawTet[i].x + p_data->moveTet.y;
 
-			if (tempX < 0 || tempX >(FIELD_X_NUM - 1) || tempY > (FIELD_Y_NUM - 1))
+			if (tempX < 0 || tempX > FIELD_X_NUM - 1 || tempY > FIELD_Y_NUM + DEADLINE - 1)
 				return false;
 		}
 	}
@@ -205,7 +247,7 @@ bool canSRS(pGameData p_data)
 			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
 			tempY = 3 - p_data->drawTet[i].x + p_data->moveTet.y;
 
-			if (tempX < 0 || tempX >(FIELD_X_NUM - 1) || tempY > (FIELD_Y_NUM - 1))
+			if (tempX < 0 || tempX > FIELD_X_NUM - 1 || tempY > FIELD_Y_NUM + DEADLINE - 1)
 				return false;
 		}
 	}
@@ -218,7 +260,7 @@ void cascade(pGameData p_data)
 {
 	int i;
 
-	for (int y = 0; y < FIELD_Y_NUM; y++) {
+	for (int y = 4; y < FIELD_Y_NUM + DEADLINE; y++) {
 		if (p_data->playfield[y][FIELD_X_NUM] == 0) {
 			i = y;
 			while (p_data->playfield[i][FIELD_X_NUM] != 10) {
@@ -254,14 +296,14 @@ void drawTetris(pGameData p_data)
 {
 	Clear();
 
-	for (int y = 8; y < FIELD_Y_NUM; y++) {
+	for (int y = 8; y < FIELD_Y_NUM + DEADLINE; y++) {
 		for (int x = 0; x < FIELD_X_NUM; x++) {
 			TextOut(x * 12 + 450, (y - FREESPACE_NUM) * 12 + 50, "%d", p_data->playfield[y][x]);
 		}
 		TextOut(130 + 470, (y - FREESPACE_NUM) * 12 + 50, "%d", p_data->playfield[y][FIELD_X_NUM]);
 	}
 
-	for (int y = FREESPACE_NUM; y < FIELD_Y_NUM; y++) {
+	for (int y = FREESPACE_NUM; y < FIELD_Y_NUM + DEADLINE; y++) {
 		for (int x = 0; x < FIELD_X_NUM; x++) {
 			DrawImageGP(p_data->tetromino_image[p_data->playfield[y][x]], x * TETROMINO_SIZE, (y - FREESPACE_NUM) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
 		}
