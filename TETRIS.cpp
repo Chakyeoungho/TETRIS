@@ -206,8 +206,8 @@ bool isNotWall(pGameData p_data, int direction)
 		}
 
 		for (int i = 0; i < 4; i++) {
-			if (p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][tempArr[p_data->drawTet[i].y] + p_data->moveTet.x + 1] < M_Tet);
-				//return false;
+			if (p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][tempArr[p_data->drawTet[i].y] + p_data->moveTet.x - 1] < M_Tet)
+				return false;
 		}
 	} else if (direction == RIGHT) {
 		for (int i = 0; i < 4; i++) {
