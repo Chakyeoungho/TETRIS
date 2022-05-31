@@ -235,8 +235,8 @@ bool canSRS(pGameData p_data)
 
 	if (p_data->currTetromino > MITet && p_data->currTetromino != MOTet) {
 		for (int i = 0; i < 4; i++) {
-			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
-			tempY = 2 - p_data->drawTet[i].x + p_data->moveTet.y;
+			tempX = 2 - p_data->drawTet[i].y + p_data->moveTet.x;
+			tempY = p_data->drawTet[i].x + p_data->moveTet.y;
 
 			if (tempX < 0 || tempX > FIELD_X_NUM - 1 || tempY > FIELD_Y_NUM + DEADLINE - 1)
 				return false;
@@ -244,8 +244,8 @@ bool canSRS(pGameData p_data)
 	}
 	else if (p_data->currTetromino == MITet) {
 		for (int i = 0; i < 4; i++) {
-			tempX = p_data->drawTet[i].y + p_data->moveTet.x;
-			tempY = 3 - p_data->drawTet[i].x + p_data->moveTet.y;
+			tempX = 3 - p_data->drawTet[i].y + p_data->moveTet.x;
+			tempY = p_data->drawTet[i].x + p_data->moveTet.y;
 
 			if (tempX < 0 || tempX > FIELD_X_NUM - 1 || tempY > FIELD_Y_NUM + DEADLINE - 1)
 				return false;
@@ -321,15 +321,15 @@ void spin(pGameData p_data)
 
 	if (p_data->currTetromino > MITet && p_data->currTetromino != MOTet) {
 		for (int i = 0; i < 4; i++) {
-			temp = p_data->drawTet[i].x;
-			p_data->drawTet[i].x = p_data->drawTet[i].y;
-			p_data->drawTet[i].y = 2 - temp;
+			temp = p_data->drawTet[i].y;
+			p_data->drawTet[i].y = p_data->drawTet[i].x;
+			p_data->drawTet[i].x = 2 - temp;
 		}
 	} else if (p_data->currTetromino == MITet) {
 		for (int i = 0; i < 4; i++) {
-			temp = p_data->drawTet[i].x;
-			p_data->drawTet[i].x = p_data->drawTet[i].y;
-			p_data->drawTet[i].y = 3 - temp;
+			temp = p_data->drawTet[i].y;
+			p_data->drawTet[i].y = p_data->drawTet[i].x;
+			p_data->drawTet[i].x = 3 - temp;
 		}
 	}
 }
