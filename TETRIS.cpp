@@ -16,6 +16,7 @@ typedef struct _GameData {
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];
 	BYTE currTetromino;
 	BYTE currSpinState : 2;    // 4개 플래그를 사용하기 편함
+	bool tetLock;
 	void *tetromino_image[8];
 } GameData, *pGameData;
 
@@ -27,10 +28,10 @@ void cascade(pGameData p_data);                     // 캐스캐이드, 줄이 �
 void setData(pGameData p_data);                     // 테트리스 데이터 설정
 void removeData(pGameData p_data);                  // 테트리스 데이터 제거
 void drawTetris(pGameData p_data);                  // 테트리스 그리기
-bool canSRS(pGameData p_data, int wise);                      // SRS(Super Rotation System) 확인
+bool canSRS(pGameData p_data, int wise);            // SRS(Super Rotation System) 확인
 void spin(pGameData p_data, BYTE spinDirection);    // 회전, SRS(Super Rotation System) 확인
 
-TIMER LockTetromino(NOT_USE_TIMER_DATA);
+TIMER LockTetromino(NOT_USE_TIMER_DATA);    // FrameProc타이머에 LockTetromino타이머가 있다는 것을 알려주기 위해
 
 TIMER FrameProc(NOT_USE_TIMER_DATA)
 {
@@ -41,11 +42,11 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 			removeData(ap_data);
 			ap_data->moveTet.y++;
 			setData(ap_data);
-		} else  {
+			drawTetris(ap_data);
+		} else if (ap_data->tetLock) {
+			ap_data->tetLock = FALSE;
 			SetTimer(T_LOCKTET, 500, LockTetromino);
-			KillTimer(T_FRAME);
 		}
-		drawTetris(ap_data);
 	}
 }
 
@@ -53,12 +54,12 @@ TIMER LockTetromino(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
-	cascade(ap_data);
 	setTetromino(ap_data);
 	setData(ap_data);
+	cascade(ap_data);
 	drawTetris(ap_data);
+	ap_data->tetLock = TRUE;
 
-	SetTimer(T_FRAME, 800, FrameProc);
 	KillTimer(T_LOCKTET);
 }
 
@@ -135,7 +136,7 @@ int main()
 
 	srand((unsigned int)time(NULL));
 
-	SetTimer(T_FRAME, 800, FrameProc);
+	SetTimer(T_FRAME, 1, FrameProc);
 					  // 테트로미노 모양 데이터
 	GameData data = { { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },      // I
 						{ { 0, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // J
@@ -145,15 +146,15 @@ int main()
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },    // Z
 					  // Wall Kick 데이터
-					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  // I 0>>1
-						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      // I 1>>2
-						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  // I 2>>3
-						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, 2 },   { -2, -1 } } },      // I 3>>0
+					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  //         I        0>>1
+						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      //         I        1>>2
+						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  //         I        2>>3
+						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, 2 },   { -2, -1 } } },      //         I        3>>0
 						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, 2 },   { -1, 2 }  },        // J, L, O, S, T, Z 0>>1
 						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z 1>>2
 						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z 2>>3
 						  { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } } } },    // J, L, O, S, T, Z 3>>0
-					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, { 0, } };
+					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, TRUE, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
