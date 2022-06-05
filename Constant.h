@@ -20,14 +20,17 @@ enum Tetromino {
 
 // 표준 크기
 #define TETROMINO_SIZE (30)    // 테트리미노 크기
-#define FIELD_X_NUM (10)    // 가로 크기
-#define LINEINFO (1)    // 각 줄에 대한 정보
-#define FIELD_Y_NUM (24)    // 세로 크기
-#define DEADLINE (4)        // 이 이상 넘어오면 게임 오버
-#define FREESPACE_NUM (FIELD_Y_NUM + DEADLINE - (20))    // 위에 안보이는 곳
+#define FIELD_X_NUM (10)       // 가로 크기
+#define FIELD_Y_NUM (20)       // 세로 크기
+#define LINEINFO (1)           // 각 줄에 대한 정보
+#define BUFFERZONE (20)        // 위쪽 여유공간
 
 // 키보드 방향
 #define LEFT  0    // 왼쪽
 #define RIGHT 1    // 오른쪽
+
+// 타이머 아이디
+#define FRAME 2000      // 프레임
+#define LOCKTET 2001    // 테트로미노 잠금
 
 #endif // !__CONSTANT_H__
