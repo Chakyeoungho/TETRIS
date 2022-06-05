@@ -9,11 +9,11 @@
 
 typedef struct _GameData {
 	const POINT tetrominoesData[7][4];
-	const POINT wallKickData[2][5];
+	const POINT wallKickData[2][4][5];
 	POINT drawTet[4];
 	POINT moveTet;
 	WORD gameState;
-	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINEINFO];
+	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];
 	BYTE currTetromino;
 	BYTE currSpinState : 2;    // 4개 플래그를 사용하기 편함
 	void *tetromino_image[8];
@@ -42,8 +42,8 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 			ap_data->moveTet.y++;
 			setData(ap_data);
 		} else  {
-			SetTimer(LOCKTET, 500, LockTetromino);
-			KillTimer(FRAME);
+			SetTimer(T_LOCKTET, 500, LockTetromino);
+			KillTimer(T_FRAME);
 		}
 		drawTetris(ap_data);
 	}
@@ -58,8 +58,8 @@ TIMER LockTetromino(NOT_USE_TIMER_DATA)
 	setData(ap_data);
 	drawTetris(ap_data);
 
-	SetTimer(FRAME, 800, FrameProc);
-	KillTimer(LOCKTET);
+	SetTimer(T_FRAME, 800, FrameProc);
+	KillTimer(T_LOCKTET);
 }
 
 // 사용자가 메시지를 직접 처리할 때 사용하는 함수
@@ -135,7 +135,8 @@ int main()
 
 	srand((unsigned int)time(NULL));
 
-	SetTimer(FRAME, 800, FrameProc);
+	SetTimer(T_FRAME, 800, FrameProc);
+					  // 테트로미노 모양 데이터
 	GameData data = { { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },      // I
 						{ { 0, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // J
 						{ { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // L
@@ -143,15 +144,22 @@ int main()
 						{ { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 } },      // S
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },    // Z
-					  { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 }, { 3, 1 } },      // I
-						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 }, { 3, 1 } } },    // J, L, O, S, T, Z
+					  // Wall Kick 데이터
+					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  // I 0>>1
+						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      // I 1>>2
+						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  // I 2>>3
+						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, 2 },   { -2, -1 } } },      // I 3>>0
+						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, 2 },   { -1, 2 }  },        // J, L, O, S, T, Z 0>>1
+						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z 1>>2
+						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z 2>>3
+						  { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } } } },    // J, L, O, S, T, Z 3>>0
 					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
 	setImage();
 	setTetromino(ap_data);
-	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINEINFO));
+	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));
 	for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
 		ap_data->playfield[y][FIELD_X_NUM] = 10;
 	}
@@ -256,7 +264,7 @@ void cascade(pGameData p_data)
 		if (p_data->playfield[y][FIELD_X_NUM] == 0) {
 			i = y;
 			while (p_data->playfield[i][FIELD_X_NUM] != 10) {
-				memcpy(p_data->playfield[i], p_data->playfield[i - 1], sizeof(BYTE) * (FIELD_X_NUM + LINEINFO));
+				memcpy(p_data->playfield[i], p_data->playfield[i - 1], sizeof(BYTE) * (FIELD_X_NUM + LINE_INFO));
 				i--;
 			}
 		}
