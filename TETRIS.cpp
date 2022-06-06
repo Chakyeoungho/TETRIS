@@ -16,7 +16,6 @@ typedef struct _GameData {
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];
 	BYTE currTetromino;
 	BYTE currSpinState : 2;    // 4개 플래그를 사용하기 편함
-	bool tetLock;
 	void *tetromino_image[8];
 } GameData, *pGameData;
 
@@ -43,8 +42,6 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 			ap_data->moveTet.y++;
 			setData(ap_data);
 			drawTetris(ap_data);
-		} else if (ap_data->tetLock) {
-			ap_data->tetLock = FALSE;
 			SetTimer(T_LOCKTET, 500, LockTetromino);
 		}
 	}
@@ -54,11 +51,13 @@ TIMER LockTetromino(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
-	setTetromino(ap_data);
-	setData(ap_data);
-	cascade(ap_data);
-	drawTetris(ap_data);
-	ap_data->tetLock = TRUE;
+
+	if (!isNotFloor(ap_data)) {
+		setTetromino(ap_data);
+		setData(ap_data);
+		cascade(ap_data);
+		drawTetris(ap_data);
+	}
 
 	KillTimer(T_LOCKTET);
 }
@@ -87,6 +86,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					p_data->moveTet.y++;
 					setData(p_data);
 					drawTetris(p_data);
+					SetTimer(T_LOCKTET, 500, LockTetromino);
 				}
 				break;
 			case VK_LEFT:   // 왼쪽 버튼
@@ -136,7 +136,7 @@ int main()
 
 	srand((unsigned int)time(NULL));
 
-	SetTimer(T_FRAME, 1, FrameProc);
+	SetTimer(T_FRAME, 1000, FrameProc);
 					  // 테트로미노 모양 데이터
 	GameData data = { { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },      // I
 						{ { 0, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // J
@@ -154,7 +154,7 @@ int main()
 						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z 1>>2
 						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z 2>>3
 						  { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } } } },    // J, L, O, S, T, Z 3>>0
-					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, TRUE, { 0, } };
+					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
