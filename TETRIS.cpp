@@ -46,13 +46,10 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 			drawTetris(ap_data);
 		}
 		
-		if (ap_data->tetLock) {
+		if (!isNotFloor(ap_data) && ap_data->tetLock) {
 			ap_data->tetLock = FALSE;
 			SetTimer(T_LOCKDELAY, 500, LockDelay);
 		}
-
-		if (ap_data->playfield[FIELD_Y_NUM][FIELD_X_NUM] < 10)
-			ap_data->gameState = GAMEOVER;
 	}
 }
 
@@ -65,6 +62,11 @@ TIMER LockDelay(NOT_USE_TIMER_DATA)
 		setTetromino(ap_data);
 		setData(ap_data);
 		cascade(ap_data);
+		drawTetris(ap_data);
+	}
+
+	if (ap_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
+		ap_data->gameState = GAMEOVER;
 		drawTetris(ap_data);
 	}
 
@@ -129,6 +131,11 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				setTetromino(p_data);
 				setData(p_data);
 				drawTetris(p_data);
+
+				if (p_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
+					p_data->gameState = GAMEOVER;
+					drawTetris(p_data);
+				}
 				break;
 			default:
 				break;
