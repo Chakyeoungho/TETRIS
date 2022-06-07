@@ -16,6 +16,7 @@ typedef struct _GameData {
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];
 	BYTE currTetromino;
 	BYTE currSpinState : 2;    // 4개 플래그를 사용하기 편함
+	bool tetLock;
 	void *tetromino_image[8];
 } GameData, *pGameData;
 
@@ -30,7 +31,7 @@ void drawTetris(pGameData p_data);                  // 테트리스 그리기
 bool canSRS(pGameData p_data, int wise);            // SRS(Super Rotation System) 확인
 void spin(pGameData p_data, BYTE spinDirection);    // 회전, SRS(Super Rotation System) 확인
 
-TIMER LockTetromino(NOT_USE_TIMER_DATA);    // FrameProc타이머에 LockTetromino타이머가 있다는 것을 알려주기 위해
+TIMER LockDelay(NOT_USE_TIMER_DATA);    // FrameProc타이머에 LockDelay타이머가 있다는 것을 알려주기 위해
 
 TIMER FrameProc(NOT_USE_TIMER_DATA)
 {
@@ -41,13 +42,21 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 			removeData(ap_data);
 			ap_data->moveTet.y++;
 			setData(ap_data);
+			ap_data->tetLock = TRUE;
 			drawTetris(ap_data);
-			SetTimer(T_LOCKTET, 500, LockTetromino);
 		}
+		
+		if (ap_data->tetLock) {
+			ap_data->tetLock = FALSE;
+			SetTimer(T_LOCKDELAY, 500, LockDelay);
+		}
+
+		if (ap_data->playfield[FIELD_Y_NUM][FIELD_X_NUM] < 10)
+			ap_data->gameState = GAMEOVER;
 	}
 }
 
-TIMER LockTetromino(NOT_USE_TIMER_DATA)
+TIMER LockDelay(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
@@ -59,7 +68,7 @@ TIMER LockTetromino(NOT_USE_TIMER_DATA)
 		drawTetris(ap_data);
 	}
 
-	KillTimer(T_LOCKTET);
+	KillTimer(T_LOCKDELAY);
 }
 
 // 사용자가 메시지를 직접 처리할 때 사용하는 함수
@@ -85,8 +94,13 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					removeData(p_data);
 					p_data->moveTet.y++;
 					setData(p_data);
+					p_data->tetLock = TRUE;
 					drawTetris(p_data);
-					SetTimer(T_LOCKTET, 500, LockTetromino);
+				}
+
+				if (p_data->tetLock) {
+					p_data->tetLock = FALSE;
+					SetTimer(T_LOCKDELAY, 500, LockDelay);
 				}
 				break;
 			case VK_LEFT:   // 왼쪽 버튼
@@ -146,24 +160,24 @@ int main()
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },    // Z
 					  // Wall Kick 데이터
-					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  //         I        0>>1
-						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      //         I        1>>2
-						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  //         I        2>>3
-						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, 2 },   { -2, -1 } } },      //         I        3>>0
-						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, 2 },   { -1, 2 }  },        // J, L, O, S, T, Z 0>>1
-						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z 1>>2
-						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z 2>>3
-						  { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } } } },    // J, L, O, S, T, Z 3>>0
-					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, { 0, } };
+					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  //         I         0>>1
+						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      //         I         1>>2
+						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  //         I         2>>3
+						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, 2 },   { -2, -1 } } },      //         I         3>>0
+						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, 2 },   { -1, 2 }  },        // J, L, O, S, T, Z  0>>1
+						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z  1>>2
+						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z  2>>3
+						  { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } } } },    // J, L, O, S, T, Z  3>>0
+					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, TRUE, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
 	setImage();
-	setTetromino(ap_data);
 	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));
 	for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
 		ap_data->playfield[y][FIELD_X_NUM] = 10;
 	}
+	setTetromino(ap_data);
 	setData(ap_data);
 	drawTetris(ap_data);
 
@@ -193,6 +207,19 @@ void setTetromino(pGameData p_data)
 	memcpy(p_data->drawTet, p_data->tetrominoesData[p_data->currTetromino], sizeof(POINT) * 4);
 	p_data->moveTet = { 3, BUFFERZONE };
 	p_data->currSpinState = 0;
+
+	bool isOk = false;
+	while (!isOk) {
+		isOk = true;
+
+		for (int i = 0; i < 4; i++) {
+			if (p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
+				p_data->moveTet.y--;
+				isOk = false;
+				break;
+			}
+		}
+	}
 }
 
 // 테트리미노가 바닥에 닿았는지 확인
@@ -305,6 +332,7 @@ void drawTetris(pGameData p_data)
 	}
 	
 	TextOut(500, 500, "%d", p_data->currSpinState);
+	TextOut(490, 510, "%d", p_data->gameState);
 
 	for (int y = BUFFERZONE; y < FIELD_Y_NUM + BUFFERZONE; y++) {
 		for (int x = 0; x < FIELD_X_NUM; x++) {
