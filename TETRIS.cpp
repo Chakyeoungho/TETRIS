@@ -31,28 +31,7 @@ void drawTetris(pGameData p_data);                  // 테트리스 그리기
 bool canSRS(pGameData p_data, int wise);            // SRS(Super Rotation System) 확인
 void spin(pGameData p_data, BYTE spinDirection);    // 회전, SRS(Super Rotation System) 확인
 
-TIMER LockDelay(NOT_USE_TIMER_DATA);    // FrameProc타이머에 LockDelay타이머가 있다는 것을 알려주기 위해
-
-TIMER FrameProc(NOT_USE_TIMER_DATA)
-{
-	pGameData ap_data = (pGameData)GetAppData();
-
-	if (ap_data->gameState == PLAYGAME) {
-		if (isNotFloor(ap_data)) {
-			removeData(ap_data);
-			ap_data->moveTet.y++;
-			setData(ap_data);
-			ap_data->tetLock = TRUE;
-			drawTetris(ap_data);
-		}
-		
-		if (!isNotFloor(ap_data) && ap_data->tetLock) {
-			ap_data->tetLock = FALSE;
-			SetTimer(T_LOCKDELAY, 500, LockDelay);
-		}
-	}
-}
-
+// Lock Delay 타이머
 TIMER LockDelay(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
@@ -63,6 +42,7 @@ TIMER LockDelay(NOT_USE_TIMER_DATA)
 		setData(ap_data);
 		cascade(ap_data);
 		drawTetris(ap_data);
+		ap_data->tetLock = TRUE;
 	}
 
 	if (ap_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
@@ -71,6 +51,26 @@ TIMER LockDelay(NOT_USE_TIMER_DATA)
 	}
 
 	KillTimer(T_LOCKDELAY);
+}
+
+// 프레임 타이머
+TIMER FrameProc(NOT_USE_TIMER_DATA)
+{
+	pGameData ap_data = (pGameData)GetAppData();
+
+	if (ap_data->gameState == PLAYGAME) {
+		if (isNotFloor(ap_data)) {
+			removeData(ap_data);
+			ap_data->moveTet.y++;
+			setData(ap_data);
+			drawTetris(ap_data);
+		}
+		
+		if (!isNotFloor(ap_data) && ap_data->tetLock) {
+			ap_data->tetLock = FALSE;
+			SetTimer(T_LOCKDELAY, 500, LockDelay);
+		}
+	}
 }
 
 // 사용자가 메시지를 직접 처리할 때 사용하는 함수
@@ -82,8 +82,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 		// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
 		// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
 		if (p_data->gameState == PLAYGAME) {
-			switch (wParam)
-			{
+			switch (wParam) {
 			case VK_UP:   // 위쪽 버튼
 				p_data->currSpinState++;
 				removeData(p_data);
@@ -96,11 +95,10 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					removeData(p_data);
 					p_data->moveTet.y++;
 					setData(p_data);
-					p_data->tetLock = TRUE;
 					drawTetris(p_data);
 				}
 
-				if (p_data->tetLock) {
+				if (!isNotFloor(p_data) && p_data->tetLock) {
 					p_data->tetLock = FALSE;
 					SetTimer(T_LOCKDELAY, 500, LockDelay);
 				}
