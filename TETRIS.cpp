@@ -36,6 +36,8 @@ TIMER LockDelay(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
+	if (isNotFloor(ap_data))
+		ap_data->tetLock = TRUE;
 
 	if (!isNotFloor(ap_data)) {
 		setTetromino(ap_data);
