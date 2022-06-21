@@ -21,8 +21,8 @@ enum Tetromino {
 // 표준 크기
 #define TETROMINO_SIZE (30)    // 테트리미노 크기(pixel)
 #define FIELD_X_NUM    (10)    // 가로 크기
-#define FIELD_Y_NUM    (20)    // 세로 크기
 #define LINE_INFO      (1)     // 각 줄에 대한 정보
+#define FIELD_Y_NUM    (20)    // 세로 크기
 #define BUFFERZONE     (20)    // 버퍼존(위쪽 여유 공간)
 
 // 키보드 방향

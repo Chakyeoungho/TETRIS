@@ -68,7 +68,7 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 		
 		if (!isNotFloor(ap_data) && ap_data->tetLock) {
 			ap_data->tetLock = FALSE;
-			SetTimer(T_LOCKDELAY, 500, LockDelay);
+			//SetTimer(T_LOCKDELAY, 500, LockDelay);
 		}
 	}
 }
@@ -89,6 +89,12 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				setData(p_data);
 				drawTetris(p_data);
 				break;
+			case VK_CONTROL:
+				removeData(p_data);
+				spin(p_data, COUNTERCLOCKWISE);
+				setData(p_data);
+				drawTetris(p_data);
+				break;
 			case VK_DOWN:   // 아래쪽 버튼
 				removeData(p_data);
 				if (isNotFloor(p_data))
@@ -98,7 +104,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 				if (!isNotFloor(p_data) && p_data->tetLock) {
 					p_data->tetLock = FALSE;
-					SetTimer(T_LOCKDELAY, 500, LockDelay);
+					//SetTimer(T_LOCKDELAY, 500, LockDelay);
 				}
 				break;
 			case VK_LEFT:   // 왼쪽 버튼
@@ -162,14 +168,14 @@ int main()
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },    // Z
 					  // Wall Kick 데이터
-					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  //         I         0>>1
-						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      //         I         1>>2
-						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  //         I         2>>3
-						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, 2 },   { -2, -1 } } },      //         I         3>>0
-						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, 2 },   { -1, 2 }  },        // J, L, O, S, T, Z  0>>1
-						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z  1>>2
-						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z  2>>3
-						  { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } } } },    // J, L, O, S, T, Z  3>>0
+					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, -1 }, { 1, 2 }   },		  //         I         0>>1
+						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, 2 },  { 2, -1 }  }, 	      //         I         1>>2
+						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, 1 },   { -1, -2 } },		  //         I         2>>3
+						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, -2 },  { -2, 1 }  } },      //         I         3>>0
+						{ { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } },        // J, L, O, S, T, Z  0>>1
+						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z  1>>2
+						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z  2>>3
+						  { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, 2 },   { -1, 2 }  } } },    // J, L, O, S, T, Z  3>>0
 					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, TRUE, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
@@ -326,59 +332,62 @@ void drawTetris(pGameData p_data)
 // 회전, SRS(Super Rotation System) 확인
 void spin(pGameData p_data, BYTE spinDirection)
 {
-	LONG tempX, tempY;
-
-	if (p_data->currTetromino > MITet && p_data->currTetromino != MOTet) {
-		for (int i = 0; i < 4; i++) {
-			tempX = 2 - p_data->drawTet[i].y + p_data->moveTet.x;
-			tempY = p_data->drawTet[i].x + p_data->moveTet.y;
-
-			if (tempX < 0 || tempX > FIELD_X_NUM - 1 || tempY > FIELD_Y_NUM + BUFFERZONE - 1)
-				return;
-		}
-	}
-	else if (p_data->currTetromino == MITet) {
-		for (int i = 0; i < 4; i++) {
-			tempX = 3 - p_data->drawTet[i].y + p_data->moveTet.x;
-			tempY = p_data->drawTet[i].x + p_data->moveTet.y;
-
-			if (tempX < 0 || tempX > FIELD_X_NUM - 1 || tempY > FIELD_Y_NUM + BUFFERZONE - 1)
-				return;
-		}
-	}
-
-	LONG temp;
+	bool srs;
+	POINT tempSpin[4];
 
 	if (spinDirection == CLOCKWISE) {
-		p_data->currSpinState++;
-		if (p_data->currTetromino > MITet && p_data->currTetromino != MOTet) {
+		if (p_data->currTetromino == MITet) {
 			for (int i = 0; i < 4; i++) {
-				temp = p_data->drawTet[i].y;
-				p_data->drawTet[i].y = p_data->drawTet[i].x;
-				p_data->drawTet[i].x = 2 - temp;
+				tempSpin[i].x = 3 - p_data->drawTet[i].y;
+				tempSpin[i].y = p_data->drawTet[i].x;
 			}
-		} else if (p_data->currTetromino == MITet) {
-			for (int i = 0; i < 4; i++) {
-				temp = p_data->drawTet[i].y;
-				p_data->drawTet[i].y = p_data->drawTet[i].x;
-				p_data->drawTet[i].x = 3 - temp;
-			}
-		}
-	} else if (spinDirection == COUNTERCLOCKWISE) {
-		p_data->currSpinState--;
-		if (p_data->currTetromino > MITet && p_data->currTetromino != MOTet) {
-			for (int i = 0; i < 4; i++) {
-				temp = p_data->drawTet[i].y;
-				p_data->drawTet[i].y = p_data->drawTet[i].x;
-				p_data->drawTet[i].x = 2 - temp;
-			}
-		} else if (p_data->currTetromino == MITet) {
-			for (int i = 0; i < 4; i++) {
-				temp = p_data->drawTet[i].y;
-				p_data->drawTet[i].y = p_data->drawTet[i].x;
-				p_data->drawTet[i].x = 3 - temp;
-			}
-		}
 
+			for (int test = 0; test < 5; test++) {
+				srs = TRUE;
+
+				for (int i = 0; i < 4; i++)
+					if (tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[0][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE || 
+						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[0][p_data->currSpinState][test].x >= FIELD_X_NUM || 
+						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[0][p_data->currSpinState][test].x < 0 || 
+						p_data->playfield[tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[0][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[0][p_data->currSpinState][test].x] != M_Tet) {
+						srs = FALSE;
+						break;
+					}
+
+				if (srs) {
+					memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
+					p_data->moveTet.x += p_data->wallKickData[0][p_data->currSpinState][test].x;
+					p_data->moveTet.y -= p_data->wallKickData[0][p_data->currSpinState][test].y;
+					p_data->currSpinState++;
+					break;
+				}
+			}
+		} else if (p_data->currTetromino != MOTet) {
+			for (int i = 0; i < 4; i++) {
+				tempSpin[i].x = 2 - p_data->drawTet[i].y;
+				tempSpin[i].y = p_data->drawTet[i].x;
+			}
+
+			for (int test = 0; test < 5; test++) {
+				srs = TRUE;
+
+				for (int i = 0; i < 4; i++)
+					if (tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[1][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
+						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[1][p_data->currSpinState][test].x >= FIELD_X_NUM ||
+						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[1][p_data->currSpinState][test].x < 0 ||
+						p_data->playfield[tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[1][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[1][p_data->currSpinState][test].x] != M_Tet) {
+						srs = FALSE;
+						break;
+					}
+
+				if (srs) {
+					memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
+					p_data->moveTet.x += p_data->wallKickData[1][p_data->currSpinState][test].x;
+					p_data->moveTet.y -= p_data->wallKickData[1][p_data->currSpinState][test].y;
+					p_data->currSpinState++;
+					break;
+				}
+			}
+		}
 	}
 }
