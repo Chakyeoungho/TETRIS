@@ -23,12 +23,12 @@ typedef struct _GameData {
 void setImage();                                    // 이미지 파일 설정
 void setTetromino(pGameData p_data);                // 테트리미노 설정
 bool isNotFloor(pGameData p_data);                  // 테트리미노가 바닥에 닿았는지 확인
-bool isNotWall(pGameData p_data, int direction);    // 테트리미노가 벽에 닿았는지 확인
+bool isNotWall(pGameData p_data, WPARAM direction);    // 테트리미노가 벽에 닿았는지 확인
 void cascade(pGameData p_data);                     // 캐스캐이드, 줄이 꽉차면 삭제
 void setData(pGameData p_data);                     // 테트리스 데이터 설정
 void removeData(pGameData p_data);                  // 테트리스 데이터 제거
 void drawTetris(pGameData p_data);                  // 테트리스 그리기
-void spin(pGameData p_data, BYTE spinDirection);    // 회전, SRS(Super Rotation System) 확인
+void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
 
 // Lock Delay 타이머
 TIMER LockDelay(NOT_USE_TIMER_DATA)
@@ -83,15 +83,10 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 		// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
 		// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
 			switch (wParam) {
-			case VK_UP:   // 위쪽 버튼
+			case VK_UP: case VK_CONTROL:   // 회전
 				removeData(p_data);
-				spin(p_data, CLOCKWISE);
-				setData(p_data);
-				drawTetris(p_data);
-				break;
-			case VK_CONTROL:
-				removeData(p_data);
-				spin(p_data, COUNTERCLOCKWISE);
+				if (p_data->currTetromino != MOTet)
+					spin(p_data, wParam);
 				setData(p_data);
 				drawTetris(p_data);
 				break;
@@ -107,17 +102,10 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					//SetTimer(T_LOCKDELAY, 500, LockDelay);
 				}
 				break;
-			case VK_LEFT:   // 왼쪽 버튼
+			case VK_LEFT: case VK_RIGHT:   // 왼쪽, 오른쪽 버튼
 				removeData(p_data);
-				if (isNotWall(p_data, LEFT))
-					p_data->moveTet.x--;
-				setData(p_data);
-				drawTetris(p_data);
-				break;
-			case VK_RIGHT:   // 오른쪽 버튼
-				removeData(p_data);
-				if (isNotWall(p_data, RIGHT))
-					p_data->moveTet.x++;
+				if (isNotWall(p_data, wParam))
+					p_data->moveTet.x += wParam - 0x26;
 				setData(p_data);
 				drawTetris(p_data);
 				break;
@@ -167,7 +155,7 @@ int main()
 						{ { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 } },      // S
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },    // Z
-					  // Wall Kick 데이터
+					  // Wall Kick 데이터 (y좌표 반전)
 					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  //         I         0>>1
 						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      //         I         1>>2
 						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  //         I         2>>3
@@ -247,18 +235,15 @@ bool isNotFloor(pGameData p_data)
 }
 
 // 테트리미노가 벽에 닿았는지 확인
-bool isNotWall(pGameData p_data, int direction)
+bool isNotWall(pGameData p_data, WPARAM direction)
 {
-	BYTE tempArr[4] = { 0, };
-
-	if (direction == LEFT) {
-		memset(tempArr, UCHAR_MAX, sizeof(BYTE) * 4);
+	if (direction == VK_LEFT) {
 		for (int i = 0; i < 4; i++) {
 			if (p_data->drawTet[i].x + p_data->moveTet.x < 1 || 
 				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x - 1] != M_Tet)
 				return false;
 		}
-	} else if (direction == RIGHT) {
+	} else if (direction == VK_RIGHT) {
 		for (int i = 0; i < 4; i++) {
 			if (p_data->drawTet[i].x + p_data->moveTet.x >= FIELD_X_NUM - 1 || 
 				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x + 1] != M_Tet)
@@ -330,120 +315,62 @@ void drawTetris(pGameData p_data)
 }
 
 // 회전, SRS(Super Rotation System) 확인
-void spin(pGameData p_data, BYTE spinDirection)
+void spin(pGameData p_data, WPARAM spinDirection)
 {
-	bool srs;
+	bool srs, isITet = p_data->currTetromino;
 	POINT tempSpin[4];
 
-	if (spinDirection == CLOCKWISE) {    // 시계방향 회전
-		if (p_data->currTetromino == MITet) {
-			for (int i = 0; i < 4; i++) {
-				tempSpin[i].x = 3 - p_data->drawTet[i].y;
-				tempSpin[i].y = p_data->drawTet[i].x;
-			}
+	if (spinDirection == VK_UP) {    // 시계방향 회전
+		for (int i = 0; i < 4; i++) {
+			tempSpin[i].x = (3 - isITet) - p_data->drawTet[i].y;
+			tempSpin[i].y = p_data->drawTet[i].x;
+		}
 
-			for (int test = 0; test < 5; test++) {
-				srs = TRUE;
+		for (int test = 0; test < 5; test++) {
+			srs = TRUE;
 
-				for (int i = 0; i < 4; i++)
-					if (tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[0][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE || 
-						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[0][p_data->currSpinState][test].x >= FIELD_X_NUM || 
-						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[0][p_data->currSpinState][test].x < 0 || 
-						p_data->playfield[tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[0][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[0][p_data->currSpinState][test].x] != M_Tet) {
-						srs = FALSE;
-						break;
-					}
-
-				if (srs) {
-					memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-					p_data->moveTet.x += p_data->wallKickData[0][p_data->currSpinState][test].x;
-					p_data->moveTet.y += p_data->wallKickData[0][p_data->currSpinState][test].y;
-					p_data->currSpinState++;
+			for (int i = 0; i < 4; i++)
+				if (tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
+					tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
+					tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
+					p_data->playfield[tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
+					srs = FALSE;
 					break;
 				}
-			}
-		} else if (p_data->currTetromino != MOTet) {
-			for (int i = 0; i < 4; i++) {
-				tempSpin[i].x = 2 - p_data->drawTet[i].y;
-				tempSpin[i].y = p_data->drawTet[i].x;
-			}
 
-			for (int test = 0; test < 5; test++) {
-				srs = TRUE;
-
-				for (int i = 0; i < 4; i++)
-					if (tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[1][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
-						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[1][p_data->currSpinState][test].x >= FIELD_X_NUM ||
-						tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[1][p_data->currSpinState][test].x < 0 ||
-						p_data->playfield[tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[1][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[1][p_data->currSpinState][test].x] != M_Tet) {
-						srs = FALSE;
-						break;
-					}
-
-				if (srs) {
-					memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-					p_data->moveTet.x += p_data->wallKickData[1][p_data->currSpinState][test].x;
-					p_data->moveTet.y += p_data->wallKickData[1][p_data->currSpinState][test].y;
-					p_data->currSpinState++;
-					break;
-				}
+			if (srs) {
+				memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
+				p_data->moveTet.x += p_data->wallKickData[isITet][p_data->currSpinState][test].x;
+				p_data->moveTet.y += p_data->wallKickData[isITet][p_data->currSpinState][test].y;
+				p_data->currSpinState++;
+				break;
 			}
 		}
-	} else if (spinDirection == COUNTERCLOCKWISE) {    // 반시계방향 회전
-		if (p_data->currTetromino == MITet) {
-			for (int i = 0; i < 4; i++) {
-				tempSpin[i].x = p_data->drawTet[i].y;
-				tempSpin[i].y = 3 - p_data->drawTet[i].x;
-			}
-
-			for (int test = 0; test < 5; test++) {
-				p_data->currSpinState--;
-				srs = TRUE;
-
-				for (int i = 0; i < 4; i++)
-					if (tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[0][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
-						tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[0][p_data->currSpinState][test].x >= FIELD_X_NUM ||
-						tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[0][p_data->currSpinState][test].x < 0 ||
-						p_data->playfield[tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[0][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[0][p_data->currSpinState][test].x] != M_Tet) {
-						p_data->currSpinState++;
-						srs = FALSE;
-						break;
-					}
-
-				if (srs) {
-					memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-					p_data->moveTet.x -= p_data->wallKickData[0][p_data->currSpinState][test].x;
-					p_data->moveTet.y -= p_data->wallKickData[0][p_data->currSpinState][test].y;
-					break;
-				}
-			}
+	} else if (spinDirection == VK_CONTROL) {    // 반시계방향 회전
+		for (int i = 0; i < 4; i++) {
+			tempSpin[i].x = p_data->drawTet[i].y;
+			tempSpin[i].y = (3 - isITet) - p_data->drawTet[i].x;
 		}
-		else if (p_data->currTetromino != MOTet) {
-			for (int i = 0; i < 4; i++) {
-				tempSpin[i].x = p_data->drawTet[i].y;
-				tempSpin[i].y = 2 - p_data->drawTet[i].x;
-			}
 
-			for (int test = 0; test < 5; test++) {
-				p_data->currSpinState--;
-				srs = TRUE;
+		for (int test = 0; test < 5; test++) {
+			p_data->currSpinState--;
+			srs = TRUE;
 
-				for (int i = 0; i < 4; i++)
-					if (tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[1][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
-						tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[1][p_data->currSpinState][test].x >= FIELD_X_NUM ||
-						tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[1][p_data->currSpinState][test].x < 0 ||
-						p_data->playfield[tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[1][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[1][p_data->currSpinState][test].x] != M_Tet) {
-						p_data->currSpinState++;
-						srs = FALSE;
-						break;
-					}
-
-				if (srs) {
-					memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-					p_data->moveTet.x -= p_data->wallKickData[1][p_data->currSpinState][test].x;
-					p_data->moveTet.y -= p_data->wallKickData[1][p_data->currSpinState][test].y;
+			for (int i = 0; i < 4; i++)
+				if (tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
+					tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
+					tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
+					p_data->playfield[tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
+					p_data->currSpinState++;
+					srs = FALSE;
 					break;
 				}
+
+			if (srs) {
+				memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
+				p_data->moveTet.x -= p_data->wallKickData[isITet][p_data->currSpinState][test].x;
+				p_data->moveTet.y -= p_data->wallKickData[isITet][p_data->currSpinState][test].y;
+				break;
 			}
 		}
 	}
