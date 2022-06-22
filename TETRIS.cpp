@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Constant.h"
 #include <time.h>
+#include "WELL1024a.h"	// WELL Random number generator  http://www.iro.umontreal.ca/~panneton/WELLRNG.html
 #include "tipsware.h"
 
 // sndPlaySound 함수를 사용하기 위해 필요한 헤더 파일과 라이브러리 추가!
@@ -30,8 +31,9 @@ void removeData(pGameData p_data);                  // 테트리스 데이터 �
 void drawTetris(pGameData p_data);                  // 테트리스 그리기
 void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
 
+// TODO fix
 // Lock Delay 타이머
-TIMER LockDelay(NOT_USE_TIMER_DATA)
+TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
@@ -54,6 +56,7 @@ TIMER LockDelay(NOT_USE_TIMER_DATA)
 	KillTimer(T_LOCKDELAY);
 }
 
+// TODO fix
 // 프레임 타이머
 TIMER FrameProc(NOT_USE_TIMER_DATA)
 {
@@ -68,11 +71,13 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 		
 		if (!isNotFloor(ap_data) && ap_data->tetLock) {
 			ap_data->tetLock = FALSE;
+			// TODO fix
 			//SetTimer(T_LOCKDELAY, 500, LockDelay);
 		}
 	}
 }
 
+// TODO fix
 // 사용자가 메시지를 직접 처리할 때 사용하는 함수
 int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 {
@@ -99,6 +104,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 				if (!isNotFloor(p_data) && p_data->tetLock) {
 					p_data->tetLock = FALSE;
+					// TODO fix
 					//SetTimer(T_LOCKDELAY, 500, LockDelay);
 				}
 				break;
@@ -119,6 +125,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				setTetromino(p_data);
 				drawTetris(p_data);
 
+				// TODO fix
 				if (p_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
 					p_data->gameState = GAMEOVER;
 					drawTetris(p_data);
@@ -144,7 +151,13 @@ int main()
 
 	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * FIELD_Y_NUM);
 
-	srand((unsigned int)time(NULL));
+	srand((unsigned)time(NULL));
+	unsigned int init[32];
+	for (int i = 0; i < 32; i++) {
+		init[i] = rand() << 16 | rand();
+		// WELL Random 을 초기화 하기 위해, C 표준 rand() 함수를 이용하여 init 값을 생성합니다
+	}
+	InitWELLRNG1024a(init); // WELL Random 초기화
 
 	SetTimer(T_FRAME, 1000, FrameProc);
 					  // 테트로미노 모양 데이터
@@ -198,19 +211,21 @@ void setImage()
 // 테트리미노 설정
 void setTetromino(pGameData p_data)
 {
-	p_data->currTetromino = (BYTE)(rand() % 7);
+	// 기본 사용법 
+	//	double x = (double)WELLRNG1024a(); // 0.0 <= x < 1.0  실수 랜덤 생성
+	p_data->currTetromino = (BYTE)((double)WELLRNG1024a() * 7);
 	memcpy(p_data->drawTet, p_data->tetrominoesData[p_data->currTetromino], sizeof(POINT) * 4);
 	p_data->moveTet = { 3, BUFFERZONE };
 	p_data->currSpinState = 0;
 
-	bool isOk = false;
-	while (!isOk) {
-		isOk = true;
+	bool isOk = true;
+	while (isOk) {
+		isOk = false;
 
 		for (int i = 0; i < 4; i++) {
 			if (p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
 				p_data->moveTet.y--;
-				isOk = false;
+				isOk = true;
 				break;
 			}
 		}
@@ -222,8 +237,6 @@ void setTetromino(pGameData p_data)
 // 테트리미노가 바닥에 닿았는지 확인
 bool isNotFloor(pGameData p_data)
 {
-	BYTE tempArr[4] = { 0, };
-
 	for (int i = 0; i < 4; i++) {
 		if (p_data->drawTet[i].y + p_data->moveTet.y >= FIELD_Y_NUM + BUFFERZONE - 1 ||
 			p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y + 1][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
@@ -314,11 +327,12 @@ void drawTetris(pGameData p_data)
 	ShowDisplay();
 }
 
+// ToDo fix
 // 회전, SRS(Super Rotation System) 확인
 void spin(pGameData p_data, WPARAM spinDirection)
 {
 	bool srs, isITet = p_data->currTetromino;
-	POINT tempSpin[4];
+	POINT tempSpin[4] = { 0, };
 
 	if (spinDirection == VK_UP) {    // 시계방향 회전
 		for (int i = 0; i < 4; i++) {
@@ -327,14 +341,14 @@ void spin(pGameData p_data, WPARAM spinDirection)
 		}
 
 		for (int test = 0; test < 5; test++) {
-			srs = TRUE;
+			srs = true;
 
 			for (int i = 0; i < 4; i++)
 				if (tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
 					tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
 					tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
 					p_data->playfield[tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
-					srs = FALSE;
+					srs = false;
 					break;
 				}
 
@@ -354,7 +368,7 @@ void spin(pGameData p_data, WPARAM spinDirection)
 
 		for (int test = 0; test < 5; test++) {
 			p_data->currSpinState--;
-			srs = TRUE;
+			srs = true;
 
 			for (int i = 0; i < 4; i++)
 				if (tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
@@ -362,7 +376,7 @@ void spin(pGameData p_data, WPARAM spinDirection)
 					tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
 					p_data->playfield[tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
 					p_data->currSpinState++;
-					srs = FALSE;
+					srs = false;
 					break;
 				}
 
