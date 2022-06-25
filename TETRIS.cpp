@@ -21,14 +21,14 @@ typedef struct _GameData {
 	void *tetromino_image[8];
 } GameData, *pGameData;
 
-void setImage();                                    // 이미지 파일 설정
-void setTetromino(pGameData p_data);                // 테트리미노 설정
-bool isNotFloor(pGameData p_data);                  // 테트리미노가 바닥에 닿았는지 확인
-bool isNotWall(pGameData p_data, WPARAM direction);    // 테트리미노가 벽에 닿았는지 확인
-void cascade(pGameData p_data);                     // 캐스캐이드, 줄이 꽉차면 삭제
-void setData(pGameData p_data);                     // 테트리스 데이터 설정
-void removeData(pGameData p_data);                  // 테트리스 데이터 제거
-void drawTetris(pGameData p_data);                  // 테트리스 그리기
+void setImage();                                      // 이미지 파일 설정
+void setTetromino(pGameData p_data);                  // 테트리미노 설정
+bool isNotFloor(pGameData p_data);                    // 테트리미노가 바닥에 닿았는지 확인
+bool isNotWall(pGameData p_data, WPARAM direction);   // 테트리미노가 벽에 닿았는지 확인
+void cascade(pGameData p_data);                       // 캐스캐이드, 줄이 꽉차면 삭제
+void setData(pGameData p_data);                       // 테트리스 데이터 설정
+void removeData(pGameData p_data);                    // 테트리스 데이터 제거
+void drawTetris(pGameData p_data);                    // 테트리스 그리기
 void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
 
 // TODO fix
@@ -37,16 +37,15 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
-	ap_data->tetLock = TRUE;
-
 	removeData(ap_data);
 	if (!isNotFloor(ap_data)) {
 		setData(ap_data);
 		setTetromino(ap_data);
 		cascade(ap_data);
 		drawTetris(ap_data);
+	} else {
+		setData(ap_data);
 	}
-	setData(ap_data);
 
 	if (ap_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
 		ap_data->gameState = GAMEOVER;
@@ -64,16 +63,21 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 
 	if (ap_data->gameState == PLAYGAME) {
 		removeData(ap_data);
-		if (isNotFloor(ap_data))
+		if (isNotFloor(ap_data)) {
 			ap_data->moveTet.y++;
-		setData(ap_data);
-		drawTetris(ap_data);
-		
-		if (!isNotFloor(ap_data) && ap_data->tetLock) {
-			ap_data->tetLock = FALSE;
-			// TODO fix
-			//SetTimer(T_LOCKDELAY, 500, LockDelay);
+			ap_data->tetLock = true;
+			KillTimer(T_LOCKDELAY);
 		}
+		
+		// TODO fix
+		if (!isNotFloor(ap_data) && ap_data->tetLock) {
+			setData(ap_data);
+			ap_data->tetLock = false;
+			SetTimer(T_LOCKDELAY, 500, LockDelayProc);
+		} else {
+			setData(ap_data);
+		}
+		drawTetris(ap_data);
 	}
 }
 
@@ -85,8 +89,8 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 	if (p_data != NULL && p_data->gameState == PLAYGAME) {
 		if (a_message_id == WM_KEYDOWN) {  // 키보드의 버튼이 눌러졌을 때
-		// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
-		// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
+			// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
+			// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
 			switch (wParam) {
 			case VK_UP: case VK_CONTROL:   // 회전
 				removeData(p_data);
@@ -97,16 +101,21 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				break;
 			case VK_DOWN:   // 아래쪽 버튼
 				removeData(p_data);
-				if (isNotFloor(p_data))
+				if (isNotFloor(p_data)) {
 					p_data->moveTet.y++;
-				setData(p_data);
-				drawTetris(p_data);
-
-				if (!isNotFloor(p_data) && p_data->tetLock) {
-					p_data->tetLock = FALSE;
-					// TODO fix
-					//SetTimer(T_LOCKDELAY, 500, LockDelay);
+					p_data->tetLock = true;
+					KillTimer(T_LOCKDELAY);
 				}
+
+				// TODO fix
+				if (!isNotFloor(p_data) && p_data->tetLock) {
+					setData(p_data);
+					p_data->tetLock = false;
+					SetTimer(T_LOCKDELAY, 500, LockDelayProc);
+				} else {
+					setData(p_data);
+				}
+				drawTetris(p_data);
 				break;
 			case VK_LEFT: case VK_RIGHT:   // 왼쪽, 오른쪽 버튼
 				removeData(p_data);
@@ -169,14 +178,14 @@ int main()
 						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // T
 						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },    // Z
 					  // Wall Kick 데이터 (y좌표 반전)
-					  { { { { 0, 0 }, { -2, 0 }, { 1, 0 },   { -2, 1 },  { 1, -2 }  },		  //         I         0>>1
-						  { { 0, 0 }, { -1, 0 }, { 2, 0 },   { -1, -2 }, { 2, 1 }   }, 	      //         I         1>>2
-						  { { 0, 0 }, { 2, 0 },  { -1, 0 },  { 2, -1 },  { -1, 2 }  },		  //         I         2>>3
-						  { { 0, 0 }, { 1, 0 },  { -2, 0 },  { 1, 2 },   { -2, -1 } } },      //         I         3>>0
-						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, { 0, 2 },   { -1, 2 }  },        // J, L, O, S, T, Z  0>>1
-						  { { 0, 0 }, { 1, 0 },  { 1, 1 },   { 0, -2 },  { 1, -2 }  },        // J, L, O, S, T, Z  1>>2
-						  { { 0, 0 }, { 1, 0 },  { 1, -1 },  { 0, 2 },   { 1, 2 }   },        // J, L, O, S, T, Z  2>>3
-						  { { 0, 0 }, { -1, 0 }, { -1, 1 },  { 0, -2 },  { -1, -2 } } } },    // J, L, O, S, T, Z  3>>0
+					  { { { { 0, 0 }, { -2, 0 }, {  1,  0 }, { -2,  1 }, {  1, -2 } },		  //         I         0>>1
+						  { { 0, 0 }, { -1, 0 }, {  2,  0 }, { -1, -2 }, {  2,  1 } }, 	      //         I         1>>2
+						  { { 0, 0 }, {  2, 0 }, { -1,  0 }, {  2, -1 }, { -1,  2 } },		  //         I         2>>3
+						  { { 0, 0 }, {  1, 0 }, { -2,  0 }, {  1,  2 }, { -2, -1 } } },      //         I         3>>0
+						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, {  0,  2 }, { -1,  2 } },        // J, L, O, S, T, Z  0>>1
+						  { { 0, 0 }, {  1, 0 }, {  1,  1 }, {  0, -2 }, {  1, -2 } },        // J, L, O, S, T, Z  1>>2
+						  { { 0, 0 }, {  1, 0 }, {  1, -1 }, {  0,  2 }, {  1,  2 } },        // J, L, O, S, T, Z  2>>3
+						  { { 0, 0 }, { -1, 0 }, { -1,  1 }, {  0, -2 }, { -1, -2 } } } },    // J, L, O, S, T, Z  3>>0
 					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, TRUE, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
@@ -208,11 +217,12 @@ void setImage()
 	ap_data->tetromino_image[M_Tet] = LoadImageGP(".\\Tetromino\\M_Tet.png");    // _
 }
 
+//TODO fix
 // 테트리미노 설정
 void setTetromino(pGameData p_data)
 {
-	// 기본 사용법 
-	//	double x = (double)WELLRNG1024a(); // 0.0 <= x < 1.0  실수 랜덤 생성
+	// WELLRNG1024a() 기본 사용법 
+	// double x = (double)WELLRNG1024a(); // 0.0 <= x < 1.0  실수 랜덤 생성
 	p_data->currTetromino = (BYTE)((double)WELLRNG1024a() * 7);
 	memcpy(p_data->drawTet, p_data->tetrominoesData[p_data->currTetromino], sizeof(POINT) * 4);
 	p_data->moveTet = { 3, BUFFERZONE };
@@ -231,6 +241,7 @@ void setTetromino(pGameData p_data)
 		}
 	}
 
+	p_data->tetLock = true;
 	setData(p_data);
 }
 
