@@ -14,9 +14,11 @@ typedef struct _GameData {
 	POINT drawTet[4];
 	POINT moveTet;
 	WORD gameState;
+	WORD tetLockTime;
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];
 	BYTE currTetromino;
 	BYTE currSpinState : 2;    // 4개 플래그를 사용하기 편함
+	BYTE chance;
 	bool tetLock;
 	void *tetromino_image[8];
 } GameData, *pGameData;
@@ -30,58 +32,53 @@ void setData(pGameData p_data);                       // 테트리스 데이터 
 void removeData(pGameData p_data);                    // 테트리스 데이터 제거
 void drawTetris(pGameData p_data);                    // 테트리스 그리기
 void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
+void moveDown(pGameData p_data);                         // 바닥에 닿았는지 검사 후 실행
 
-// TODO fix
+TIMER FrameProc(NOT_USE_TIMER_DATA);
+
 // Lock Delay 타이머
 TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
-	removeData(ap_data);
 	if (!isNotFloor(ap_data)) {
-		setData(ap_data);
-		setTetromino(ap_data);
-		cascade(ap_data);
-		drawTetris(ap_data);
+		ap_data->tetLockTime++;
+		Rectangle(460, 450, 550, 466, RGB(0, 0, 0), RGB(255, 255, 255));
+		TextOut(500, 450, "%d", ap_data->tetLockTime);
+		ShowDisplay();
+
+		if (ap_data->tetLockTime >= 35) {
+			cascade(ap_data);
+			setTetromino(ap_data);
+			drawTetris(ap_data);
+			ap_data->chance = 0;
+
+			SetTimer(T_FRAME, 1000, FrameProc);
+			KillTimer(T_LOCKDELAY);
+		}
 	} else {
-		setData(ap_data);
+		//ap_data->tetLockTime = 0;
+
+		SetTimer(T_FRAME, 1000, FrameProc);
+		KillTimer(T_LOCKDELAY);
 	}
+
 
 	if (ap_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
 		ap_data->gameState = GAMEOVER;
 		drawTetris(ap_data);
 	}
-
-	KillTimer(T_LOCKDELAY);
 }
 
-// TODO fix
 // 프레임 타이머
 TIMER FrameProc(NOT_USE_TIMER_DATA)
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
-	if (ap_data->gameState == PLAYGAME) {
-		removeData(ap_data);
-		if (isNotFloor(ap_data)) {
-			ap_data->moveTet.y++;
-			ap_data->tetLock = true;
-			KillTimer(T_LOCKDELAY);
-		}
-		
-		// TODO fix
-		if (!isNotFloor(ap_data) && ap_data->tetLock) {
-			setData(ap_data);
-			ap_data->tetLock = false;
-			SetTimer(T_LOCKDELAY, 500, LockDelayProc);
-		} else {
-			setData(ap_data);
-		}
-		drawTetris(ap_data);
-	}
+	if (ap_data->gameState == PLAYGAME)
+		moveDown(ap_data);
 }
 
-// TODO fix
 // 사용자가 메시지를 직접 처리할 때 사용하는 함수
 int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 {
@@ -93,43 +90,46 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 			// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
 			switch (wParam) {
 			case VK_UP: case VK_CONTROL:   // 회전
-				removeData(p_data);
-				if (p_data->currTetromino != MOTet)
-					spin(p_data, wParam);
-				setData(p_data);
-				drawTetris(p_data);
+				//if (p_data->chance < 4) {
+					if (p_data->currTetromino != MOTet) {
+						spin(p_data, wParam);
+
+						drawTetris(p_data);
+					}
+
+					if (!isNotFloor(p_data)) {
+						SetTimer(T_LOCKDELAY, 10, LockDelayProc);
+						KillTimer(T_FRAME);
+					}
+
+					if (!isNotFloor(p_data) && p_data->chance < 4) {
+						p_data->chance++;
+						p_data->tetLockTime = 0;
+					}
+				//}
 				break;
 			case VK_DOWN:   // 아래쪽 버튼
-				removeData(p_data);
-				if (isNotFloor(p_data)) {
-					p_data->moveTet.y++;
-					p_data->tetLock = true;
-					KillTimer(T_LOCKDELAY);
-				}
-
-				// TODO fix
-				if (!isNotFloor(p_data) && p_data->tetLock) {
-					setData(p_data);
-					p_data->tetLock = false;
-					SetTimer(T_LOCKDELAY, 500, LockDelayProc);
-				} else {
-					setData(p_data);
-				}
-				drawTetris(p_data);
+				moveDown(p_data);
 				break;
 			case VK_LEFT: case VK_RIGHT:   // 왼쪽, 오른쪽 버튼
-				removeData(p_data);
-				if (isNotWall(p_data, wParam))
+				if (isNotWall(p_data, wParam)) {
+					removeData(p_data);
 					p_data->moveTet.x += wParam - 0x26;
-				setData(p_data);
-				drawTetris(p_data);
+					setData(p_data);
+					drawTetris(p_data);
+
+					if (p_data->chance < 4) {
+						p_data->chance++;
+						p_data->tetLockTime = 0;
+					}
+				}
 				break;
 			case VK_SPACE:    // 스페이스바
-				removeData(p_data);
 				while (isNotFloor(p_data)) {
+					removeData(p_data);
 					p_data->moveTet.y++;
+					setData(p_data);
 				}
-				setData(p_data);
 				cascade(p_data);
 				setTetromino(p_data);
 				drawTetris(p_data);
@@ -155,7 +155,7 @@ ON_MESSAGE(NULL, NULL, NULL, NULL, NULL, OnUserMsg)
 
 int main()
 {
-	waveOutSetVolume(0, (DWORD)0x25002500);    // 사운드 볼륨 조정 오른쪽 왼쪽
+	waveOutSetVolume(0, (DWORD)0x12501250);    // 사운드 볼륨 조정 오른쪽 왼쪽
 	sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생
 
 	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * FIELD_Y_NUM);
@@ -186,7 +186,7 @@ int main()
 						  { { 0, 0 }, {  1, 0 }, {  1,  1 }, {  0, -2 }, {  1, -2 } },        // J, L, O, S, T, Z  1>>2
 						  { { 0, 0 }, {  1, 0 }, {  1, -1 }, {  0,  2 }, {  1,  2 } },        // J, L, O, S, T, Z  2>>3
 						  { { 0, 0 }, { -1, 0 }, { -1,  1 }, {  0, -2 }, { -1, -2 } } } },    // J, L, O, S, T, Z  3>>0
-					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, { { 0, }, }, 0, 0, TRUE, { 0, } };
+					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, 0, { { 0, }, }, 0, 0, 0, TRUE, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
@@ -248,12 +248,17 @@ void setTetromino(pGameData p_data)
 // 테트리미노가 바닥에 닿았는지 확인
 bool isNotFloor(pGameData p_data)
 {
+	removeData(p_data);
+
 	for (int i = 0; i < 4; i++) {
 		if (p_data->drawTet[i].y + p_data->moveTet.y >= FIELD_Y_NUM + BUFFERZONE - 1 ||
 			p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y + 1][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
+			setData(p_data);
 			return false;
 		}
 	}
+
+	setData(p_data);
 
 	return true;
 }
@@ -261,19 +266,27 @@ bool isNotFloor(pGameData p_data)
 // 테트리미노가 벽에 닿았는지 확인
 bool isNotWall(pGameData p_data, WPARAM direction)
 {
+	removeData(p_data);
+
 	if (direction == VK_LEFT) {
 		for (int i = 0; i < 4; i++) {
-			if (p_data->drawTet[i].x + p_data->moveTet.x < 1 || 
-				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x - 1] != M_Tet)
+			if (p_data->drawTet[i].x + p_data->moveTet.x < 1 ||
+				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x - 1] != M_Tet) {
+				setData(p_data);
 				return false;
+			}
 		}
 	} else if (direction == VK_RIGHT) {
 		for (int i = 0; i < 4; i++) {
-			if (p_data->drawTet[i].x + p_data->moveTet.x >= FIELD_X_NUM - 1 || 
-				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x + 1] != M_Tet)
+			if (p_data->drawTet[i].x + p_data->moveTet.x >= FIELD_X_NUM - 1 ||
+				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x + 1] != M_Tet) {
+				setData(p_data);
 				return false;
+			}
 		}
 	}
+
+	setData(p_data);
 
 	return true;
 }
@@ -325,7 +338,10 @@ void drawTetris(pGameData p_data)
 		}
 		TextOut(130 + 470, (y - BUFFERZONE) * 12 + 50, "%d", p_data->playfield[y][FIELD_X_NUM]);
 	}
-	
+
+	Rectangle(460, 450, 550, 466, RGB(0, 0, 0), RGB(255, 255, 255));
+	TextOut(500, 450, "%d", p_data->tetLockTime);
+
 	TextOut(500, 500, "%d", p_data->currSpinState);
 	TextOut(490, 510, "%d", p_data->gameState);
 
@@ -342,6 +358,8 @@ void drawTetris(pGameData p_data)
 // 회전, SRS(Super Rotation System) 확인
 void spin(pGameData p_data, WPARAM spinDirection)
 {
+	removeData(p_data);
+
 	bool srs, isITet = p_data->currTetromino;
 	POINT tempSpin[4] = { 0, };
 
@@ -398,5 +416,27 @@ void spin(pGameData p_data, WPARAM spinDirection)
 				break;
 			}
 		}
+	}
+
+	setData(p_data);
+}
+
+// 바닥에 닿았는지 검사 후 실행
+void moveDown(pGameData p_data) {
+	if (isNotFloor(p_data)) {
+		removeData(p_data);
+		p_data->moveTet.y++;
+		setData(p_data);
+		drawTetris(p_data);
+
+		p_data->tetLockTime = 0;
+		p_data->tetLock = true;
+		KillTimer(T_LOCKDELAY);
+	}
+
+	if (!isNotFloor(p_data) && p_data->tetLock) {
+		p_data->tetLock = false;
+		SetTimer(T_LOCKDELAY, 10, LockDelayProc);
+		KillTimer(T_FRAME);
 	}
 }
