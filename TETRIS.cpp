@@ -90,23 +90,21 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 			// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
 			switch (wParam) {
 			case VK_UP: case VK_CONTROL:   // 회전
-				//if (p_data->chance < 4) {
-					if (p_data->currTetromino != MOTet) {
-						spin(p_data, wParam);
+				if (p_data->currTetromino != MOTet) {
+					spin(p_data, wParam);
 
-						drawTetris(p_data);
-					}
+					drawTetris(p_data);
+				}
 
-					if (!isNotFloor(p_data)) {
-						SetTimer(T_LOCKDELAY, 10, LockDelayProc);
-						KillTimer(T_FRAME);
-					}
-
-					if (!isNotFloor(p_data) && p_data->chance < 4) {
+				if (!isNotFloor(p_data)) {
+					SetTimer(T_LOCKDELAY, 10, LockDelayProc);
+					KillTimer(T_FRAME);
+					
+					if (p_data->chance < 4) {
 						p_data->chance++;
 						p_data->tetLockTime = 0;
 					}
-				//}
+				}
 				break;
 			case VK_DOWN:   // 아래쪽 버튼
 				moveDown(p_data);
