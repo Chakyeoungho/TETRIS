@@ -13,6 +13,7 @@ typedef struct _GameData {
 	const POINT wallKickData[2][4][5];
 	POINT drawTet[4];
 	POINT moveTet;
+	LONG ghostTetY;
 	WORD gameState;
 	WORD tetLockTime;
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];
@@ -32,7 +33,7 @@ void setData(pGameData p_data);                       // 테트리스 데이터 
 void removeData(pGameData p_data);                    // 테트리스 데이터 제거
 void drawTetris(pGameData p_data);                    // 테트리스 그리기
 void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
-void moveDown(pGameData p_data);                         // 바닥에 닿았는지 검사 후 실행
+void moveDown(pGameData p_data);                      // 바닥에 닿았는지 검사 후 아래로 이동
 
 TIMER FrameProc(NOT_USE_TIMER_DATA);
 
@@ -47,7 +48,7 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 		TextOut(500, 450, "%d", ap_data->tetLockTime);
 		ShowDisplay();
 
-		if (ap_data->tetLockTime >= 35) {
+		if (ap_data->tetLockTime >= 50) {
 			cascade(ap_data);
 			setTetromino(ap_data);
 			drawTetris(ap_data);
@@ -57,8 +58,6 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 			KillTimer(T_LOCKDELAY);
 		}
 	} else {
-		//ap_data->tetLockTime = 0;
-
 		SetTimer(T_FRAME, 1000, FrameProc);
 		KillTimer(T_LOCKDELAY);
 	}
@@ -116,7 +115,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					setData(p_data);
 					drawTetris(p_data);
 
-					if (p_data->chance < 4) {
+					if (!isNotFloor(p_data) && p_data->chance < 4) {
 						p_data->chance++;
 						p_data->tetLockTime = 0;
 					}
@@ -140,6 +139,9 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 				SetTimer(T_FRAME, 1000, FrameProc);
 				break;
+			case 'Z':
+				p_data->gameState = GAMEOVER;
+				drawTetris(p_data);
 			default:
 				break;
 			}
@@ -184,7 +186,7 @@ int main()
 						  { { 0, 0 }, {  1, 0 }, {  1,  1 }, {  0, -2 }, {  1, -2 } },        // J, L, O, S, T, Z  1>>2
 						  { { 0, 0 }, {  1, 0 }, {  1, -1 }, {  0,  2 }, {  1,  2 } },        // J, L, O, S, T, Z  2>>3
 						  { { 0, 0 }, { -1, 0 }, { -1,  1 }, {  0, -2 }, { -1, -2 } } } },    // J, L, O, S, T, Z  3>>0
-					  { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, 0, { { 0, }, }, 0, 0, 0, TRUE, { 0, } };
+					  { { 0, }, }, { 3, BUFFERZONE }, 0, PLAYGAME, 0, { { 0, }, }, 0, 0, 0, TRUE, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
@@ -215,7 +217,6 @@ void setImage()
 	ap_data->tetromino_image[M_Tet] = LoadImageGP(".\\Tetromino\\M_Tet.png");    // _
 }
 
-//TODO fix
 // 테트리미노 설정
 void setTetromino(pGameData p_data)
 {
@@ -349,10 +350,11 @@ void drawTetris(pGameData p_data)
 		}
 	}
 
+
+
 	ShowDisplay();
 }
 
-// ToDo fix
 // 회전, SRS(Super Rotation System) 확인
 void spin(pGameData p_data, WPARAM spinDirection)
 {
@@ -419,7 +421,7 @@ void spin(pGameData p_data, WPARAM spinDirection)
 	setData(p_data);
 }
 
-// 바닥에 닿았는지 검사 후 실행
+// 바닥에 닿았는지 검사 후 아래로 이동
 void moveDown(pGameData p_data) {
 	if (isNotFloor(p_data)) {
 		removeData(p_data);
