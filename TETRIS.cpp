@@ -8,20 +8,21 @@
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
+// 게임 데이터
 typedef struct _GameData {
-	const POINT tetrominoesData[7][4];
-	const POINT wallKickData[2][4][5];
-	POINT drawTet[4];
-	POINT moveTet;
-	LONG ghostTetY;
-	WORD gameState;
-	WORD tetLockTime;
-	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];
-	BYTE currTetromino;
-	BYTE currSpinState : 2;    // 4개 플래그를 사용하기 편함
-	BYTE chance;
-	bool tetLock;
-	void *tetromino_image[8];
+	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];    // 플레이 필드
+	BYTE currTetromino;                   // 현재 테트로미노
+	BYTE tetPocket[7];                    // 테트로미노 포켓
+	BYTE tetHold;                         // 홀드된 테트로미노
+	POINT drawTet[4];                     // 그릴 테트로미노
+	POINT moveTet;                        // 테트로미노 이동 좌표
+	LONG ghostTetY;                       // 고스트 y좌표
+	WORD gameState;                       // 현재 게임 상태
+	WORD tetLockTime;                     // 테트로미노 잠금 시간
+	BYTE currSpinState : 2;               // 현재 회전 상태 / 4개 플래그를 사용하기 편함
+	BYTE chance;                          // 땅에 닿고 나서 움직이면 시간 초기화 되는 횟수
+	bool tetLock;                         // 테트로미노 잠금 타이머가 실행 됐는지
+	void *tetromino_image[15];             // 테트로미노 이미지
 } GameData, *pGameData;
 
 void setImage();                                      // 이미지 파일 설정
@@ -155,11 +156,12 @@ ON_MESSAGE(NULL, NULL, NULL, NULL, NULL, OnUserMsg)
 
 int main()
 {
-	waveOutSetVolume(0, (DWORD)0x12501250);    // 사운드 볼륨 조정 오른쪽 왼쪽
+	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * FIELD_Y_NUM);    // 윈도우 크기 조절
+
+	waveOutSetVolume(0, (DWORD)0x25002500);    // 사운드 볼륨 조정 오른쪽 왼쪽
 	sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생
 
-	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * FIELD_Y_NUM);
-
+	// 난수 생성
 	srand((unsigned)time(NULL));
 	unsigned int init[32];
 	for (int i = 0; i < 32; i++) {
@@ -168,35 +170,21 @@ int main()
 	}
 	InitWELLRNG1024a(init); // WELL Random 초기화
 
-	SetTimer(T_FRAME, 1000, FrameProc);
-					  // 테트로미노 모양 데이터
-	GameData data = { { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },      // I
-						{ { 0, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // J
-						{ { 2, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // L
-						{ { 1, 0 }, { 2, 0 }, { 1, 1 }, { 2, 1 } },      // O
-						{ { 1, 0 }, { 2, 0 }, { 0, 1 }, { 1, 1 } },      // S
-						{ { 1, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // T
-						{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 2, 1 } } },    // Z
-					  // Wall Kick 데이터 (y좌표 반전)
-					  { { { { 0, 0 }, { -2, 0 }, {  1,  0 }, { -2,  1 }, {  1, -2 } },		  //         I         0>>1
-						  { { 0, 0 }, { -1, 0 }, {  2,  0 }, { -1, -2 }, {  2,  1 } }, 	      //         I         1>>2
-						  { { 0, 0 }, {  2, 0 }, { -1,  0 }, {  2, -1 }, { -1,  2 } },		  //         I         2>>3
-						  { { 0, 0 }, {  1, 0 }, { -2,  0 }, {  1,  2 }, { -2, -1 } } },      //         I         3>>0
-						{ { { 0, 0 }, { -1, 0 }, { -1, -1 }, {  0,  2 }, { -1,  2 } },        // J, L, O, S, T, Z  0>>1
-						  { { 0, 0 }, {  1, 0 }, {  1,  1 }, {  0, -2 }, {  1, -2 } },        // J, L, O, S, T, Z  1>>2
-						  { { 0, 0 }, {  1, 0 }, {  1, -1 }, {  0,  2 }, {  1,  2 } },        // J, L, O, S, T, Z  2>>3
-						  { { 0, 0 }, { -1, 0 }, { -1,  1 }, {  0, -2 }, { -1, -2 } } } },    // J, L, O, S, T, Z  3>>0
-					  { { 0, }, }, { 3, BUFFERZONE }, 0, PLAYGAME, 0, { { 0, }, }, 0, 0, 0, TRUE, { 0, } };
+
+	GameData data = { { { 0, }, }, M_Tet, { 0, }, M_Tet, { { 0, }, }, { 3, BUFFERZONE }, 0, PLAYGAME, 0, 0, 0, TRUE, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
 	setImage();
+	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * 7 * 2);
 	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));
 	for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
 		ap_data->playfield[y][FIELD_X_NUM] = 10;
 	}
 	setTetromino(ap_data);
 	drawTetris(ap_data);
+
+	SetTimer(T_FRAME, 1000, FrameProc);
 
 	ShowDisplay();
 	return 0;
@@ -207,6 +195,7 @@ void setImage()
 {
 	pGameData ap_data = (pGameData)GetAppData();
 
+	// Tetromino
 	ap_data->tetromino_image[MITet] = LoadImageGP(".\\Tetromino\\MITet.png");    // I
 	ap_data->tetromino_image[MJTet] = LoadImageGP(".\\Tetromino\\MJTet.png");    // J
 	ap_data->tetromino_image[MLTet] = LoadImageGP(".\\Tetromino\\MLTet.png");    // L
@@ -215,6 +204,15 @@ void setImage()
 	ap_data->tetromino_image[MTTet] = LoadImageGP(".\\Tetromino\\MTTet.png");    // T
 	ap_data->tetromino_image[MZTet] = LoadImageGP(".\\Tetromino\\MZTet.png");    // Z
 	ap_data->tetromino_image[M_Tet] = LoadImageGP(".\\Tetromino\\M_Tet.png");    // _
+
+	// Ghost
+	ap_data->tetromino_image[GITet] = LoadImageGP(".\\Tetromino\\GITet.png");    // I
+	ap_data->tetromino_image[GJTet] = LoadImageGP(".\\Tetromino\\GJTet.png");    // J
+	ap_data->tetromino_image[GLTet] = LoadImageGP(".\\Tetromino\\GLTet.png");    // L
+	ap_data->tetromino_image[GOTet] = LoadImageGP(".\\Tetromino\\GOTet.png");    // O
+	ap_data->tetromino_image[GSTet] = LoadImageGP(".\\Tetromino\\GSTet.png");    // S
+	ap_data->tetromino_image[GTTet] = LoadImageGP(".\\Tetromino\\GTTet.png");    // T
+	ap_data->tetromino_image[GZTet] = LoadImageGP(".\\Tetromino\\GZTet.png");    // Z
 }
 
 // 테트리미노 설정
@@ -223,7 +221,7 @@ void setTetromino(pGameData p_data)
 	// WELLRNG1024a() 기본 사용법 
 	// double x = (double)WELLRNG1024a(); // 0.0 <= x < 1.0  실수 랜덤 생성
 	p_data->currTetromino = (BYTE)((double)WELLRNG1024a() * 7);
-	memcpy(p_data->drawTet, p_data->tetrominoesData[p_data->currTetromino], sizeof(POINT) * 4);
+	memcpy(p_data->drawTet, tetrominoesData[p_data->currTetromino], sizeof(POINT) * 4);
 	p_data->moveTet = { 3, BUFFERZONE };
 	p_data->currSpinState = 0;
 
@@ -373,18 +371,18 @@ void spin(pGameData p_data, WPARAM spinDirection)
 			srs = true;
 
 			for (int i = 0; i < 4; i++)
-				if (tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
-					tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
-					tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
-					p_data->playfield[tempSpin[i].y + p_data->moveTet.y + p_data->wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + p_data->wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
+				if (tempSpin[i].y + p_data->moveTet.y + wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
+					tempSpin[i].x + p_data->moveTet.x + wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
+					tempSpin[i].x + p_data->moveTet.x + wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
+					p_data->playfield[tempSpin[i].y + p_data->moveTet.y + wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
 					srs = false;
 					break;
 				}
 
 			if (srs) {
 				memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-				p_data->moveTet.x += p_data->wallKickData[isITet][p_data->currSpinState][test].x;
-				p_data->moveTet.y += p_data->wallKickData[isITet][p_data->currSpinState][test].y;
+				p_data->moveTet.x += wallKickData[isITet][p_data->currSpinState][test].x;
+				p_data->moveTet.y += wallKickData[isITet][p_data->currSpinState][test].y;
 				p_data->currSpinState++;
 				break;
 			}
@@ -400,10 +398,10 @@ void spin(pGameData p_data, WPARAM spinDirection)
 			srs = true;
 
 			for (int i = 0; i < 4; i++)
-				if (tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
-					tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
-					tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
-					p_data->playfield[tempSpin[i].y + p_data->moveTet.y - p_data->wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x - p_data->wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
+				if (tempSpin[i].y + p_data->moveTet.y - wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
+					tempSpin[i].x + p_data->moveTet.x - wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
+					tempSpin[i].x + p_data->moveTet.x - wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
+					p_data->playfield[tempSpin[i].y + p_data->moveTet.y - wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x - wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
 					p_data->currSpinState++;
 					srs = false;
 					break;
@@ -411,8 +409,8 @@ void spin(pGameData p_data, WPARAM spinDirection)
 
 			if (srs) {
 				memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-				p_data->moveTet.x -= p_data->wallKickData[isITet][p_data->currSpinState][test].x;
-				p_data->moveTet.y -= p_data->wallKickData[isITet][p_data->currSpinState][test].y;
+				p_data->moveTet.x -= wallKickData[isITet][p_data->currSpinState][test].x;
+				p_data->moveTet.y -= wallKickData[isITet][p_data->currSpinState][test].y;
 				break;
 			}
 		}
