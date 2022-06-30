@@ -141,7 +141,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				SetTimer(T_FRAME, 1000, FrameProc);
 				break;
 			case 'Z':
-				p_data->gameState = GAMEOVER;
+				p_data->tetHold = p_data->currTetromino;
 				drawTetris(p_data);
 			default:
 				break;
@@ -383,26 +383,40 @@ void drawTetris(pGameData p_data)
 	}
 
 	// 고스트
-	LONG saveMoveY, temp;
-	saveMoveY = p_data->moveTet.y;
-	while (isNotFloor(p_data)) {
-		removeData(p_data);
-		p_data->moveTet.y++;
-		setData(p_data);
-	}
-	temp = p_data->moveTet.y;
+	LONG ghostY = p_data->moveTet.y;
+	bool isFloor = true;
 	removeData(p_data);
-	p_data->moveTet.y = saveMoveY;
+	while (isFloor) {
+		for (int i = 0; i < 4; i++) {
+			if (p_data->drawTet[i].y + ghostY >= FIELD_Y_NUM + BUFFERZONE - 1 ||
+				p_data->playfield[p_data->drawTet[i].y + ghostY + 1][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
+				isFloor = false;
+				ghostY--;
+				break;
+			}
+		}
+		ghostY++;
+	}
 	setData(p_data);
 	for (int i = 0; i < 4; i++) {
-		DrawImageGP(p_data->tetromino_image[p_data->currTetromino + 8], (p_data->drawTet[i].x + p_data->moveTet.x) * TETROMINO_SIZE, (p_data->drawTet[i].y + temp) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
+		DrawImageGP(p_data->tetromino_image[p_data->currTetromino + 8], (p_data->drawTet[i].x + p_data->moveTet.x) * TETROMINO_SIZE, (p_data->drawTet[i].y + ghostY - BUFFERZONE) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
 	}
 
-	// 테트로미노 미리 보여주기
+	// 현재 테트로미노 그리기
+	for (int i = 0; i < 4; i++) {
+		DrawImageGP(p_data->tetromino_image[p_data->currTetromino], (p_data->drawTet[i].x + p_data->moveTet.x) * TETROMINO_SIZE, (p_data->drawTet[i].y + p_data->moveTet.y - BUFFERZONE) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
+	}
+
+	// 테트로미노 미리 그리기
 	for (int i = 0; i < 6; i++) {
 		for (int j = 0; j < 4; j++) {
 			DrawImageGP(p_data->tetromino_image[p_data->showTet[i]], 350 + (tetrominoesData[p_data->showTet[i]][j].x * 10), 200 + (tetrominoesData[p_data->showTet[i]][j].y * 10) + (i * 30), 10, 10);
 		}
+	}
+
+	// 홀드된 테트로미노 그리기
+	for (int j = 0; j < 4; j++) {
+		DrawImageGP(p_data->tetromino_image[p_data->tetHold], 350 + (tetrominoesData[p_data->tetHold][j].x * 10), 100 + (tetrominoesData[p_data->tetHold][j].y * 10), 10, 10);
 	}
 
 	ShowDisplay();
