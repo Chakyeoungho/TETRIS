@@ -25,6 +25,10 @@ typedef struct _GameData {
 	void *tetromino_image[15];    // 테트로미노 이미지
 } GameData, *pGameData;
 
+// 함수의 원형
+TIMER LockDelayProc(NOT_USE_TIMER_DATA);              // Lock Delay 타이머
+TIMER FrameProc(NOT_USE_TIMER_DATA);                  // 프레임 타이머
+
 void setImage();                                      // 이미지 파일 설정
 void setTetromino(pGameData p_data);                  // 테트리미노 설정
 bool isNotFloor(pGameData p_data);                    // 테트리미노가 바닥에 닿았는지 확인
@@ -35,8 +39,6 @@ void removeData(pGameData p_data);                    // 테트리스 데이터 
 void drawTetris(pGameData p_data);                    // 테트리스 그리기
 void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
 void moveDown(pGameData p_data);                      // 바닥에 닿았는지 검사 후 아래로 이동
-
-TIMER FrameProc(NOT_USE_TIMER_DATA);
 
 // Lock Delay 타이머
 TIMER LockDelayProc(NOT_USE_TIMER_DATA)
@@ -140,8 +142,11 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 				SetTimer(T_FRAME, 1000, FrameProc);
 				break;
-			case 'Z':
+			// TODO fix
+			case 'Z':    // 홀드
 				p_data->tetHold = p_data->currTetromino;
+				removeData(p_data);
+				setTetromino(p_data);
 				drawTetris(p_data);
 			default:
 				break;
@@ -274,6 +279,7 @@ void setTetromino(pGameData p_data)
 
 	p_data->tetLock = true;
 	setData(p_data);
+	SetTimer(T_FRAME, 1000, FrameProc);
 }
 
 // 테트리미노가 바닥에 닿았는지 확인
