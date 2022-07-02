@@ -39,6 +39,13 @@ enum Tetromino {
 #define FIELD_Y_NUM    (20)    // 세로 크기
 #define BUFFERZONE     (20)    // 버퍼존(위쪽 여유 공간)
 
+// 메크로 함수
+#define SWAPTET(tet1, tet2) do { \
+	BYTE tempTet = tet1;    \
+	tet1 = tet2;            \
+	tet2 = tempTet;         \
+} while(0)
+
 // 테트로미노 모양 데이터
 const POINT tetrominoesData[7][4] = { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },      // I
 									  { { 0, 0 }, { 0, 1 }, { 1, 1 }, { 2, 1 } },      // J
