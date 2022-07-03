@@ -68,7 +68,7 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 		KillTimer(T_LOCKDELAY);
 	}
 
-
+	// TODO fix
 	if (ap_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
 		ap_data->gameState = GAMEOVER;
 		drawTetris(ap_data);
@@ -146,7 +146,6 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 				SetTimer(T_FRAME, 1000, FrameProc);
 				break;
-			// TODO fix
 			case 'Z':    // 홀드
 				if (p_data->tetHold == M_Tet) {
 					p_data->isHold = true;
