@@ -8,9 +8,7 @@
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
-// 게임 데이터
-typedef struct _GameData {
-	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];    // 플레이 필드
+typedef struct _TetrominoData {
 	BYTE currTetromino;           // 현재 테트로미노
 	BYTE tetPocket[2][7];         // 테트로미노 포켓
 	BYTE showTet[6];              // 미리보기
@@ -18,9 +16,15 @@ typedef struct _GameData {
 	BYTE selectTet;               // 현재 테트로미노 선택
 	POINT drawTet[4];             // 그릴 테트로미노
 	POINT moveTet;                // 테트로미노 이동 좌표
+	BYTE currSpinState : 2;       // 현재 회전 상태 / 4개 플래그를 사용하기 편함
+} TetrominoData, *pTetrominoData;
+
+// 게임 데이터
+typedef struct _GameData {
+	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];    // 플레이 필드
+	TetrominoData tetData;        // 테트로미노 데이터 구조체
 	WORD gameState;               // 현재 게임 상태
 	WORD tetLockTime;             // 테트로미노 잠금 시간
-	BYTE currSpinState : 2;       // 현재 회전 상태 / 4개 플래그를 사용하기 편함
 	BYTE chance;                  // 땅에 닿고 나서 움직이면 시간 초기화 되는 횟수
 	bool tetLock;                 // 테트로미노 잠금 타이머가 실행 됐는지
 	bool isHold;                  // 홀드를 한번 썼는지
@@ -95,7 +99,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 			// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
 			switch (wParam) {
 			case VK_UP: case VK_CONTROL:   // 회전
-				if (p_data->currTetromino != MOTet) {
+				if (p_data->tetData.currTetromino != MOTet) {
 					spin(p_data, wParam);
 
 					drawTetris(p_data);
@@ -117,7 +121,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 			case VK_LEFT: case VK_RIGHT:   // 왼쪽, 오른쪽 버튼
 				if (isNotWall(p_data, wParam)) {
 					removeData(p_data);
-					p_data->moveTet.x += wParam - 0x26;
+					p_data->tetData.moveTet.x += wParam - 0x26;
 					setData(p_data);
 					drawTetris(p_data);
 
@@ -130,7 +134,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 			case VK_SPACE:    // 스페이스바
 				while (isNotFloor(p_data)) {
 					removeData(p_data);
-					p_data->moveTet.y++;
+					p_data->tetData.moveTet.y++;
 					setData(p_data);
 				}
 				cascade(p_data);
@@ -147,19 +151,19 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				SetTimer(T_FRAME, 1000, FrameProc);
 				break;
 			case 'Z':    // 홀드
-				if (p_data->tetHold == M_Tet) {
+				if (p_data->tetData.tetHold == M_Tet) {
 					p_data->isHold = true;
 					removeData(p_data);
-					p_data->tetHold = p_data->currTetromino;
+					p_data->tetData.tetHold = p_data->tetData.currTetromino;
 					setTetromino(p_data);
 					drawTetris(p_data);
 				} else if (!p_data->isHold) {
 					p_data->isHold = true;
 					removeData(p_data);
-					SWAPTET(p_data->tetHold, p_data->currTetromino);
-					memcpy(p_data->drawTet, tetrominoesData[p_data->currTetromino], sizeof(POINT) * 4);
-					p_data->moveTet = { 3, BUFFERZONE };
-					p_data->currSpinState = 0;
+					SWAPTET(p_data->tetData.tetHold, p_data->tetData.currTetromino);
+					memcpy(p_data->tetData.drawTet, tetrominoesData[p_data->tetData.currTetromino], sizeof(POINT) * 4);
+					p_data->tetData.moveTet = { 3, BUFFERZONE };
+					p_data->tetData.currSpinState = 0;
 					setData(p_data);
 					drawTetris(p_data);
 				}
@@ -184,14 +188,14 @@ int main()
 
 	// 난수 생성
 	srand((unsigned)time(NULL));
-	unsigned int init[32];
+	unsigned int init[32]{};
 	for (int i = 0; i < 32; i++) {
 		init[i] = rand() << 16 | rand();
 		// WELL Random 을 초기화 하기 위해, C 표준 rand() 함수를 이용하여 init 값을 생성합니다
 	}
 	InitWELLRNG1024a(init); // WELL Random 초기화
 
-	GameData data = { { { 0, }, }, M_Tet, { { 0, }, }, { 0, }, M_Tet, 0, { { 0, }, }, { 3, BUFFERZONE }, PLAYGAME, 0, 0, 0, true, false, { 0, } };
+	GameData data = { { { 0, }, }, { M_Tet, { { 0, }, }, { 0, }, M_Tet, 0, { { 0, }, }, { 3, BUFFERZONE } }, PLAYGAME, 0, 0, true, false, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
@@ -204,10 +208,10 @@ int main()
 	// 테트로미노 포켓 설정
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 7; j++) {
-			ap_data->tetPocket[i][j] = (BYTE)((double)WELLRNG1024a() * 7);
+			ap_data->tetData.tetPocket[i][j] = (BYTE)((double)WELLRNG1024a() * 7);
 
 			for (int k = 0; k < j; k++) {
-				if (ap_data->tetPocket[i][j] == ap_data->tetPocket[i][k]) {
+				if (ap_data->tetData.tetPocket[i][j] == ap_data->tetData.tetPocket[i][k]) {
 					j--;
 					break;
 				}
@@ -251,18 +255,18 @@ void setImage()
 // 테트리미노 설정
 void setTetromino(pGameData p_data)
 {
-	if (p_data->selectTet == 7) {
-		p_data->selectTet = 0;
+	if (p_data->tetData.selectTet == 7) {
+		p_data->tetData.selectTet = 0;
 
 		// WELLRNG1024a() 기본 사용법
 		// double x = (double)WELLRNG1024a(); // 0.0 <= x < 1.0  실수 랜덤 생성
-		memcpy(p_data->tetPocket[0], p_data->tetPocket[1], sizeof(BYTE) * 7);
+		memcpy(p_data->tetData.tetPocket[0], p_data->tetData.tetPocket[1], sizeof(BYTE) * 7);
 
 		for (int i = 0; i < 7; i++) {
-			p_data->tetPocket[1][i] = (BYTE)((double)WELLRNG1024a() * 7);
+			p_data->tetData.tetPocket[1][i] = (BYTE)((double)WELLRNG1024a() * 7);
 
 			for (int j = 0; j < i; j++) {
-				if (p_data->tetPocket[1][i] == p_data->tetPocket[1][j]) {
+				if (p_data->tetData.tetPocket[1][i] == p_data->tetData.tetPocket[1][j]) {
 					i--;
 					break;
 				}
@@ -270,21 +274,21 @@ void setTetromino(pGameData p_data)
 		}
 	}
 
-	BYTE temp = p_data->selectTet + 1;
+	BYTE temp = p_data->tetData.selectTet + 1;
 	for (int i = 0; i < 6; i++)
-		p_data->showTet[i] = *(p_data->tetPocket[0] + temp++);
-	p_data->currTetromino = p_data->tetPocket[0][p_data->selectTet++];
-	memcpy(p_data->drawTet, tetrominoesData[p_data->currTetromino], sizeof(POINT) * 4);
-	p_data->moveTet = { 3, BUFFERZONE };
-	p_data->currSpinState = 0;
+		p_data->tetData.showTet[i] = *(p_data->tetData.tetPocket[0] + temp++);
+	p_data->tetData.currTetromino = p_data->tetData.tetPocket[0][p_data->tetData.selectTet++];
+	memcpy(p_data->tetData.drawTet, tetrominoesData[p_data->tetData.currTetromino], sizeof(POINT) * 4);
+	p_data->tetData.moveTet = { 3, BUFFERZONE };
+	p_data->tetData.currSpinState = 0;
 
 	bool isOk = true;
 	while (isOk) {
 		isOk = false;
 
 		for (int i = 0; i < 4; i++) {
-			if (p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
-				p_data->moveTet.y--;
+			if (p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y][p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x] != M_Tet) {
+				p_data->tetData.moveTet.y--;
 				isOk = true;
 				break;
 			}
@@ -302,8 +306,8 @@ bool isNotFloor(pGameData p_data)
 	removeData(p_data);
 
 	for (int i = 0; i < 4; i++) {
-		if (p_data->drawTet[i].y + p_data->moveTet.y >= FIELD_Y_NUM + BUFFERZONE - 1 ||
-			p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y + 1][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
+		if (p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y >= FIELD_Y_NUM + BUFFERZONE - 1 ||
+			p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y + 1][p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x] != M_Tet) {
 			setData(p_data);
 			return false;
 		}
@@ -321,16 +325,16 @@ bool isNotWall(pGameData p_data, WPARAM direction)
 
 	if (direction == VK_LEFT) {
 		for (int i = 0; i < 4; i++) {
-			if (p_data->drawTet[i].x + p_data->moveTet.x < 1 ||
-				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x - 1] != M_Tet) {
+			if (p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x < 1 ||
+				p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y][p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x - 1] != M_Tet) {
 				setData(p_data);
 				return false;
 			}
 		}
 	} else if (direction == VK_RIGHT) {
 		for (int i = 0; i < 4; i++) {
-			if (p_data->drawTet[i].x + p_data->moveTet.x >= FIELD_X_NUM - 1 ||
-				p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x + 1] != M_Tet) {
+			if (p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x >= FIELD_X_NUM - 1 ||
+				p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y][p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x + 1] != M_Tet) {
 				setData(p_data);
 				return false;
 			}
@@ -362,9 +366,9 @@ void cascade(pGameData p_data)
 void setData(pGameData p_data)
 {
 	for (int i = 0; i < 4; i++) {
-		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x] = p_data->currTetromino;
+		p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y][p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x] = p_data->tetData.currTetromino;
 
-		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][FIELD_X_NUM]--;
+		p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y][FIELD_X_NUM]--;
 	}
 }
 
@@ -372,9 +376,9 @@ void setData(pGameData p_data)
 void removeData(pGameData p_data)
 {
 	for (int i = 0; i < 4; i++) {
-		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][p_data->drawTet[i].x + p_data->moveTet.x] = M_Tet;
+		p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y][p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x] = M_Tet;
 
-		p_data->playfield[p_data->drawTet[i].y + p_data->moveTet.y][FIELD_X_NUM]++;
+		p_data->playfield[p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y][FIELD_X_NUM]++;
 	}
 }
 
@@ -393,7 +397,7 @@ void drawTetris(pGameData p_data)
 	Rectangle(460, 450, 550, 466, RGB(255, 255, 255), RGB(255, 255, 255));
 	TextOut(500, 450, "%d", p_data->tetLockTime);
 
-	TextOut(500, 500, "%d", p_data->currSpinState);
+	TextOut(500, 500, "%d", p_data->tetData.currSpinState);
 	TextOut(490, 510, "%d", p_data->gameState);
 
 	for (int y = BUFFERZONE; y < FIELD_Y_NUM + BUFFERZONE; y++) {
@@ -403,13 +407,13 @@ void drawTetris(pGameData p_data)
 	}
 
 	// 고스트
-	LONG ghostY = p_data->moveTet.y;
+	LONG ghostY = p_data->tetData.moveTet.y;
 	bool isFloor = true;
 	removeData(p_data);
 	while (isFloor) {
 		for (int i = 0; i < 4; i++) {
-			if (p_data->drawTet[i].y + ghostY >= FIELD_Y_NUM + BUFFERZONE - 1 ||
-				p_data->playfield[p_data->drawTet[i].y + ghostY + 1][p_data->drawTet[i].x + p_data->moveTet.x] != M_Tet) {
+			if (p_data->tetData.drawTet[i].y + ghostY >= FIELD_Y_NUM + BUFFERZONE - 1 ||
+				p_data->playfield[p_data->tetData.drawTet[i].y + ghostY + 1][p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x] != M_Tet) {
 				isFloor = false;
 				ghostY--;
 				break;
@@ -419,24 +423,24 @@ void drawTetris(pGameData p_data)
 	}
 	setData(p_data);
 	for (int i = 0; i < 4; i++) {
-		DrawImageGP(p_data->tetromino_image[p_data->currTetromino + 8], (p_data->drawTet[i].x + p_data->moveTet.x) * TETROMINO_SIZE, (p_data->drawTet[i].y + ghostY - BUFFERZONE) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
+		DrawImageGP(p_data->tetromino_image[p_data->tetData.currTetromino + 8], (p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x) * TETROMINO_SIZE, (p_data->tetData.drawTet[i].y + ghostY - BUFFERZONE) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
 	}
 
 	// 현재 테트로미노 그리기
 	for (int i = 0; i < 4; i++) {
-		DrawImageGP(p_data->tetromino_image[p_data->currTetromino], (p_data->drawTet[i].x + p_data->moveTet.x) * TETROMINO_SIZE, (p_data->drawTet[i].y + p_data->moveTet.y - BUFFERZONE) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
+		DrawImageGP(p_data->tetromino_image[p_data->tetData.currTetromino], (p_data->tetData.drawTet[i].x + p_data->tetData.moveTet.x) * TETROMINO_SIZE, (p_data->tetData.drawTet[i].y + p_data->tetData.moveTet.y - BUFFERZONE) * TETROMINO_SIZE, TETROMINO_SIZE, TETROMINO_SIZE);
 	}
 
 	// 테트로미노 미리 그리기
 	for (int i = 0; i < 6; i++) {
 		for (int j = 0; j < 4; j++) {
-			DrawImageGP(p_data->tetromino_image[p_data->showTet[i]], 350 + (tetrominoesData[p_data->showTet[i]][j].x * 10), 200 + (tetrominoesData[p_data->showTet[i]][j].y * 10) + (i * 30), 10, 10);
+			DrawImageGP(p_data->tetromino_image[p_data->tetData.showTet[i]], 350 + (tetrominoesData[p_data->tetData.showTet[i]][j].x * 10), 200 + (tetrominoesData[p_data->tetData.showTet[i]][j].y * 10) + (i * 30), 10, 10);
 		}
 	}
 
 	// 홀드된 테트로미노 그리기
 	for (int j = 0; j < 4; j++) {
-		DrawImageGP(p_data->tetromino_image[p_data->tetHold], 350 + (tetrominoesData[p_data->tetHold][j].x * 10), 100 + (tetrominoesData[p_data->tetHold][j].y * 10), 10, 10);
+		DrawImageGP(p_data->tetromino_image[p_data->tetData.tetHold], 350 + (tetrominoesData[p_data->tetData.tetHold][j].x * 10), 100 + (tetrominoesData[p_data->tetData.tetHold][j].y * 10), 10, 10);
 	}
 
 	ShowDisplay();
@@ -447,59 +451,59 @@ void spin(pGameData p_data, WPARAM spinDirection)
 {
 	removeData(p_data);
 
-	bool srs, isITet = p_data->currTetromino;
+	bool srs, isITet = p_data->tetData.currTetromino;
 	POINT tempSpin[4] = { 0, };
 
 	if (spinDirection == VK_UP) {    // 시계방향 회전
 		for (int i = 0; i < 4; i++) {
-			tempSpin[i].x = (3 - isITet) - p_data->drawTet[i].y;
-			tempSpin[i].y = p_data->drawTet[i].x;
+			tempSpin[i].x = (3 - isITet) - p_data->tetData.drawTet[i].y;
+			tempSpin[i].y = p_data->tetData.drawTet[i].x;
 		}
 
 		for (int test = 0; test < 5; test++) {
 			srs = true;
 
 			for (int i = 0; i < 4; i++)
-				if (tempSpin[i].y + p_data->moveTet.y + wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
-					tempSpin[i].x + p_data->moveTet.x + wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
-					tempSpin[i].x + p_data->moveTet.x + wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
-					p_data->playfield[tempSpin[i].y + p_data->moveTet.y + wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x + wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
+				if (tempSpin[i].y + p_data->tetData.moveTet.y + wallKickData[isITet][p_data->tetData.currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
+					tempSpin[i].x + p_data->tetData.moveTet.x + wallKickData[isITet][p_data->tetData.currSpinState][test].x >= FIELD_X_NUM ||
+					tempSpin[i].x + p_data->tetData.moveTet.x + wallKickData[isITet][p_data->tetData.currSpinState][test].x < 0 ||
+					p_data->playfield[tempSpin[i].y + p_data->tetData.moveTet.y + wallKickData[isITet][p_data->tetData.currSpinState][test].y][tempSpin[i].x + p_data->tetData.moveTet.x + wallKickData[isITet][p_data->tetData.currSpinState][test].x] != M_Tet) {
 					srs = false;
 					break;
 				}
 
 			if (srs) {
-				memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-				p_data->moveTet.x += wallKickData[isITet][p_data->currSpinState][test].x;
-				p_data->moveTet.y += wallKickData[isITet][p_data->currSpinState][test].y;
-				p_data->currSpinState++;
+				memcpy(p_data->tetData.drawTet, tempSpin, sizeof(POINT) * 4);
+				p_data->tetData.moveTet.x += wallKickData[isITet][p_data->tetData.currSpinState][test].x;
+				p_data->tetData.moveTet.y += wallKickData[isITet][p_data->tetData.currSpinState][test].y;
+				p_data->tetData.currSpinState++;
 				break;
 			}
 		}
 	} else if (spinDirection == VK_CONTROL) {    // 반시계방향 회전
 		for (int i = 0; i < 4; i++) {
-			tempSpin[i].x = p_data->drawTet[i].y;
-			tempSpin[i].y = (3 - isITet) - p_data->drawTet[i].x;
+			tempSpin[i].x = p_data->tetData.drawTet[i].y;
+			tempSpin[i].y = (3 - isITet) - p_data->tetData.drawTet[i].x;
 		}
 
 		for (int test = 0; test < 5; test++) {
-			p_data->currSpinState--;
+			p_data->tetData.currSpinState--;
 			srs = true;
 
 			for (int i = 0; i < 4; i++)
-				if (tempSpin[i].y + p_data->moveTet.y - wallKickData[isITet][p_data->currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
-					tempSpin[i].x + p_data->moveTet.x - wallKickData[isITet][p_data->currSpinState][test].x >= FIELD_X_NUM ||
-					tempSpin[i].x + p_data->moveTet.x - wallKickData[isITet][p_data->currSpinState][test].x < 0 ||
-					p_data->playfield[tempSpin[i].y + p_data->moveTet.y - wallKickData[isITet][p_data->currSpinState][test].y][tempSpin[i].x + p_data->moveTet.x - wallKickData[isITet][p_data->currSpinState][test].x] != M_Tet) {
-					p_data->currSpinState++;
+				if (tempSpin[i].y + p_data->tetData.moveTet.y - wallKickData[isITet][p_data->tetData.currSpinState][test].y >= FIELD_Y_NUM + BUFFERZONE ||
+					tempSpin[i].x + p_data->tetData.moveTet.x - wallKickData[isITet][p_data->tetData.currSpinState][test].x >= FIELD_X_NUM ||
+					tempSpin[i].x + p_data->tetData.moveTet.x - wallKickData[isITet][p_data->tetData.currSpinState][test].x < 0 ||
+					p_data->playfield[tempSpin[i].y + p_data->tetData.moveTet.y - wallKickData[isITet][p_data->tetData.currSpinState][test].y][tempSpin[i].x + p_data->tetData.moveTet.x - wallKickData[isITet][p_data->tetData.currSpinState][test].x] != M_Tet) {
+					p_data->tetData.currSpinState++;
 					srs = false;
 					break;
 				}
 
 			if (srs) {
-				memcpy(p_data->drawTet, tempSpin, sizeof(POINT) * 4);
-				p_data->moveTet.x -= wallKickData[isITet][p_data->currSpinState][test].x;
-				p_data->moveTet.y -= wallKickData[isITet][p_data->currSpinState][test].y;
+				memcpy(p_data->tetData.drawTet, tempSpin, sizeof(POINT) * 4);
+				p_data->tetData.moveTet.x -= wallKickData[isITet][p_data->tetData.currSpinState][test].x;
+				p_data->tetData.moveTet.y -= wallKickData[isITet][p_data->tetData.currSpinState][test].y;
 				break;
 			}
 		}
@@ -512,7 +516,7 @@ void spin(pGameData p_data, WPARAM spinDirection)
 void moveDown(pGameData p_data) {
 	if (isNotFloor(p_data)) {
 		removeData(p_data);
-		p_data->moveTet.y++;
+		p_data->tetData.moveTet.y++;
 		setData(p_data);
 		drawTetris(p_data);
 
