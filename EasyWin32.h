@@ -79,6 +79,7 @@ namespace EasyAPI_Tipsware
 	void TextOut(int a_x, int a_y, const char *ap_format, ...);
 	void TextOut(int a_x, int a_y, COLORREF a_color, const char *ap_format, ...);
 	void TextCenterOut(RECT *ap_rect, const char *ap_format, ...);
+	void DrawText(RECT *ap_rect, int a_text_align, const char *ap_format, ...);
 
 	void Line(int a_sx, int a_sy, int a_ex, int a_ey);
 	void Line(int a_sx, int a_sy, int a_ex, int a_ey, COLORREF a_color, int a_tick = 1, int a_style = PS_SOLID);
