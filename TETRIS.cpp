@@ -79,6 +79,8 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 	if (ap_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
 		ap_data->gameState = GAMEOVER;
 		drawTetris(ap_data);
+
+		sndPlaySound(".\\Sound\\GameOvwe.wav", SND_ASYNC);    // 음악 재생
 	}
 }
 
@@ -154,6 +156,8 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				if (p_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
 					p_data->gameState = GAMEOVER;
 					drawTetris(p_data);
+
+					sndPlaySound(".\\Sound\\GameOver.wav", SND_ASYNC);    // 음악 재생
 				}
 
 				SetTimer(T_FRAME, 1000, FrameProc);
