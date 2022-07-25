@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "Constant.h"
+#include <math.h>
 #include <time.h>
 #include "WELL1024a.h"	// WELL Random number generator  http://www.iro.umontreal.ca/~panneton/WELLRNG.html
 #include "tipsware.h"
@@ -8,6 +9,7 @@
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
+// 테트로미노 데이터
 typedef struct _TetrominoData {
 	BYTE currTetromino;           // 현재 테트로미노
 	BYTE tetPocket[2][7];         // 테트로미노 포켓
@@ -24,6 +26,7 @@ typedef struct _GameData {
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];    // 플레이 필드
 	TetrominoData tetData;        // 테트로미노 데이터 구조체
 	WORD gameState;               // 현재 게임 상태
+	LONGLONG gameScore;           // 게임 점수
 	WORD tetLockTime;             // 테트로미노 잠금 시간
 	BYTE chance;                  // 땅에 닿고 나서 움직이면 시간 초기화 되는 횟수
 	bool tetLock;                 // 테트로미노 잠금 타이머가 실행 됐는지
@@ -125,9 +128,14 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					setData(p_data);
 					drawTetris(p_data);
 
-					if (!isNotFloor(p_data) && p_data->chance < 4) {
-						p_data->chance++;
-						p_data->tetLockTime = 0;
+					if (!isNotFloor(p_data)) {
+						SetTimer(T_LOCKDELAY, 10, LockDelayProc);
+						KillTimer(T_FRAME);
+
+						if (p_data->chance < 4) {
+							p_data->chance++;
+							p_data->tetLockTime = 0;
+						}
 					}
 				}
 				break;
@@ -195,7 +203,7 @@ int main()
 	}
 	InitWELLRNG1024a(init); // WELL Random 초기화
 
-	GameData data = { { { 0, }, }, { M_Tet, { { 0, }, }, { 0, }, M_Tet, 0, { { 0, }, }, { 3, BUFFERZONE } }, PLAYGAME, 0, 0, true, false, { 0, } };
+	GameData data = { { { 0, }, }, { M_Tet, { { 0, }, }, { 0, }, M_Tet, 0, { { 0, }, }, { 3, BUFFERZONE }, 0 }, PLAYGAME, 0, 0, 0, true, false, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
