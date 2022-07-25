@@ -80,7 +80,7 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 		ap_data->gameState = GAMEOVER;
 		drawTetris(ap_data);
 
-		sndPlaySound(".\\Sound\\GameOvwe.wav", SND_ASYNC);    // 음악 재생
+		sndPlaySound(".\\Sound\\GameOver.wav", SND_ASYNC);    // 음악 재생
 	}
 }
 
