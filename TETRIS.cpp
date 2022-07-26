@@ -27,6 +27,7 @@ typedef struct _GameData {
 	TetrominoData tetData;        // 테트로미노 데이터 구조체
 	WORD gameState;               // 현재 게임 상태
 	LONGLONG gameScore;           // 게임 점수
+	BYTE gameStage;               // 게임 스테이지
 	WORD tetLockTime;             // 테트로미노 잠금 시간
 	BYTE chance;                  // 땅에 닿고 나서 움직이면 시간 초기화 되는 횟수
 	bool tetLock;                 // 테트로미노 잠금 타이머가 실행 됐는지
@@ -67,11 +68,11 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 			ap_data->chance = 0;
 			ap_data->isHold = false;
 
-			SetTimer(T_FRAME, 1000, FrameProc);
+			SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(ap_data->gameStage - 1) * 0.007), ap_data->gameStage - 1) * 1000), FrameProc);
 			KillTimer(T_LOCKDELAY);
 		}
 	} else {
-		SetTimer(T_FRAME, 1000, FrameProc);
+		SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(ap_data->gameStage - 1) * 0.007), ap_data->gameStage - 1) * 1000), FrameProc);
 		KillTimer(T_LOCKDELAY);
 	}
 
@@ -148,9 +149,6 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					setData(p_data);
 				}
 				cascade(p_data);
-				setTetromino(p_data);
-				drawTetris(p_data);
-				p_data->isHold = false;
 
 				// TODO fix
 				if (p_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
@@ -160,7 +158,11 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					sndPlaySound(".\\Sound\\GameOver.wav", SND_ASYNC);    // 음악 재생
 				}
 
-				SetTimer(T_FRAME, 1000, FrameProc);
+				setTetromino(p_data);
+				drawTetris(p_data);
+
+				p_data->isHold = false;
+				SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(p_data->gameStage - 1) * 0.007), p_data->gameStage - 1) * 1000), FrameProc);
 				break;
 			case 'Z':    // 홀드
 				if (p_data->tetData.tetHold == M_Tet) {
@@ -207,7 +209,7 @@ int main()
 	}
 	InitWELLRNG1024a(init); // WELL Random 초기화
 
-	GameData data = { { { 0, }, }, { M_Tet, { { 0, }, }, { 0, }, M_Tet, 0, { { 0, }, }, { 3, BUFFERZONE }, 0 }, PLAYGAME, 0, 0, 0, true, false, { 0, } };
+	GameData data = { { { 0, }, }, { M_Tet, { { 0, }, }, { 0, }, M_Tet, 0, { { 0, }, }, { 3, BUFFERZONE }, 0 }, PLAYGAME, 0, 1, 0, 0, true, false, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
@@ -233,7 +235,7 @@ int main()
 	setTetromino(ap_data);    // 테트로미노 설정
 	drawTetris(ap_data);      // 테트리스 그리기
 
-	SetTimer(T_FRAME, 1000, FrameProc);
+	SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(ap_data->gameStage - 1) * 0.007), ap_data->gameStage - 1) * 1000), FrameProc);
 
 	ShowDisplay();
 	return 0;
@@ -309,7 +311,7 @@ void setTetromino(pGameData p_data)
 
 	p_data->tetLock = true;
 	setData(p_data);
-	SetTimer(T_FRAME, 1000, FrameProc);
+	SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(p_data->gameStage - 1) * 0.007), p_data->gameStage - 1) * 1000), FrameProc);
 }
 
 // 테트리미노가 바닥에 닿았는지 확인
@@ -530,11 +532,12 @@ void moveDown(pGameData p_data) {
 		removeData(p_data);
 		p_data->tetData.moveTet.y++;
 		setData(p_data);
-		drawTetris(p_data);
 
 		p_data->tetLockTime = 0;
 		p_data->tetLock = true;
 		KillTimer(T_LOCKDELAY);
+
+		drawTetris(p_data);
 	}
 
 	if (!isNotFloor(p_data) && p_data->tetLock) {
