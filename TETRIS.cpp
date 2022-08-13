@@ -49,6 +49,7 @@ void removeData(pGameData p_data);                    // 테트리스 데이터 
 void drawTetris(pGameData p_data);                    // 테트리스 그리기
 void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
 void moveDown(pGameData p_data);                      // 바닥에 닿았는지 검사 후 아래로 이동
+void checkGameOver(pGameData p_data);                 // 게임오버 확인
 
 // Lock Delay 타이머
 TIMER LockDelayProc(NOT_USE_TIMER_DATA)
@@ -62,26 +63,19 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 		ShowDisplay();
 
 		if (ap_data->tetLockTime >= 50) {
+			checkGameOver(ap_data);
 			cascade(ap_data);
 			setTetromino(ap_data);
 			drawTetris(ap_data);
 			ap_data->chance = 0;
 			ap_data->isHold = false;
 
-			SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(ap_data->gameStage - 1) * 0.007), ap_data->gameStage - 1) * 1000), FrameProc);
+			SetTimer(T_FRAME, TBYS(ap_data->gameStage), FrameProc);
 			KillTimer(T_LOCKDELAY);
 		}
 	} else {
-		SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(ap_data->gameStage - 1) * 0.007), ap_data->gameStage - 1) * 1000), FrameProc);
+		SetTimer(T_FRAME, TBYS(ap_data->gameStage), FrameProc);
 		KillTimer(T_LOCKDELAY);
-	}
-
-	// TODO fix
-	if (ap_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
-		ap_data->gameState = GAMEOVER;
-		drawTetris(ap_data);
-
-		sndPlaySound(".\\Sound\\GameOver.wav", SND_ASYNC);    // 음악 재생
 	}
 }
 
@@ -115,7 +109,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					SetTimer(T_LOCKDELAY, 10, LockDelayProc);
 					KillTimer(T_FRAME);
 					
-					if (p_data->chance < 4) {
+					if (p_data->chance < CHANCE) {
 						p_data->chance++;
 						p_data->tetLockTime = 0;
 					}
@@ -135,7 +129,7 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 						SetTimer(T_LOCKDELAY, 10, LockDelayProc);
 						KillTimer(T_FRAME);
 
-						if (p_data->chance < 4) {
+						if (p_data->chance < CHANCE) {
 							p_data->chance++;
 							p_data->tetLockTime = 0;
 						}
@@ -143,6 +137,8 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				}
 				break;
 			case VK_SPACE:    // 스페이스바
+				checkGameOver(p_data);
+
 				while (isNotFloor(p_data)) {
 					removeData(p_data);
 					p_data->tetData.moveTet.y++;
@@ -150,19 +146,11 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				}
 				cascade(p_data);
 
-				// TODO fix
-				if (p_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
-					p_data->gameState = GAMEOVER;
-					drawTetris(p_data);
-
-					sndPlaySound(".\\Sound\\GameOver.wav", SND_ASYNC);    // 음악 재생
-				}
-
 				setTetromino(p_data);
 				drawTetris(p_data);
 
 				p_data->isHold = false;
-				SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(p_data->gameStage - 1) * 0.007), p_data->gameStage - 1) * 1000), FrameProc);
+				SetTimer(T_FRAME, TBYS(p_data->gameStage), FrameProc);
 				break;
 			case 'Z':    // 홀드
 				if (p_data->tetData.tetHold == M_Tet) {
@@ -235,7 +223,7 @@ int main()
 	setTetromino(ap_data);    // 테트로미노 설정
 	drawTetris(ap_data);      // 테트리스 그리기
 
-	SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(ap_data->gameStage - 1) * 0.007), ap_data->gameStage - 1) * 1000), FrameProc);
+	SetTimer(T_FRAME, TBYS(ap_data->gameStage), FrameProc);
 
 	ShowDisplay();
 	return 0;
@@ -310,8 +298,10 @@ void setTetromino(pGameData p_data)
 	}
 
 	p_data->tetLock = true;
+	p_data->tetLockTime = 0;
+
 	setData(p_data);
-	SetTimer(T_FRAME, (UINT)(pow(0.8 - ((double)(p_data->gameStage - 1) * 0.007), p_data->gameStage - 1) * 1000), FrameProc);
+	SetTimer(T_FRAME, TBYS(p_data->gameStage), FrameProc);
 }
 
 // 테트리미노가 바닥에 닿았는지 확인
@@ -544,5 +534,15 @@ void moveDown(pGameData p_data) {
 		p_data->tetLock = false;
 		SetTimer(T_LOCKDELAY, 10, LockDelayProc);
 		KillTimer(T_FRAME);
+	}
+}
+
+void checkGameOver(pGameData p_data)
+{
+	if (p_data->playfield[FIELD_Y_NUM - 1][FIELD_X_NUM] < 10) {
+		p_data->gameState = GAMEOVER;
+		drawTetris(p_data);
+
+		sndPlaySound(".\\Sound\\GameOver.wav", SND_ASYNC);    // 음악 재생
 	}
 }

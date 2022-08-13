@@ -1,5 +1,5 @@
-﻿#ifndef __WELL1021a_H__
-#define __WELL1021a_H__
+﻿#ifndef __WELL1024a_H__
+#define __WELL1024a_H__
 
 /* ***************************************************************************** */
 /* Copyright:      Francois Panneton and Pierre L'Ecuyer, University of Montreal */

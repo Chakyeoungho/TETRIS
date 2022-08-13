@@ -38,13 +38,17 @@ enum Tetromino {
 #define LINE_INFO       (1)    // 각 줄에 대한 정보
 #define FIELD_Y_NUM    (20)    // 세로 크기
 #define BUFFERZONE     (20)    // 버퍼존(위쪽 여유 공간)
+#define CHANCE         (10)    // 땅에 닿고 움직일 수 있는 횟수
 
-// 메크로 함수
+// 테트로미노 교체
 #define SWAPTET(tet1, tet2) do { \
 	BYTE tempTet = tet1;    \
 	tet1 = tet2;            \
 	tet2 = tempTet;         \
 } while(0)
+
+// 스테이지에 따른 시간(Time By Stage)
+#define TBYS(gameStage) (UINT)(pow(0.8 - ((double)(gameStage - 1) * 0.007), gameStage - 1) * 1000)
 
 // 테트로미노 모양 데이터
 const POINT tetrominoesData[7][4] = { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },      // I
