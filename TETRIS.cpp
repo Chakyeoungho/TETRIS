@@ -383,12 +383,13 @@ bool isNotWall(pGameData p_data, WPARAM direction)
 void cascade(pGameData p_data)
 {
 	int moveLine;
-	int removedLine = 0;
+	int clearedLine = 0;
+	static int totalcClearedLine = 0;
 
 	for (int y = 4; y < FIELD_Y_NUM + BUFFERZONE; y++) {
 		if (p_data->playfield[y][FIELD_X_NUM] == 0) {
 			moveLine = y;
-			removedLine++;
+			clearedLine++;
 			while (p_data->playfield[moveLine][FIELD_X_NUM] != 10) {
 				memcpy(p_data->playfield[moveLine], p_data->playfield[moveLine - 1], sizeof(BYTE) * (FIELD_X_NUM + LINE_INFO));
 				moveLine--;
@@ -396,7 +397,7 @@ void cascade(pGameData p_data)
 		}
 	}
 
-	switch (removedLine) {
+	switch (clearedLine) {
 	case 0:
 		if (p_data->Action == T_Spin) p_data->gameScore += 400 * p_data->gameLevel;
 		break;
@@ -419,7 +420,11 @@ void cascade(pGameData p_data)
 		break;
 	}
 
-	p_data->Action += removedLine;
+	p_data->Action += clearedLine;
+
+	totalcClearedLine += clearedLine;
+	if (totalcClearedLine / 10 >= 15) p_data->gameLevel = 15;
+	else p_data->gameLevel = (totalcClearedLine / 10) + 1;
 }
 
 // 테트리스 데이터 설정
@@ -460,8 +465,8 @@ void drawTetris(pGameData p_data)
 	Rectangle(460, 450, 550, 466, RGB(255, 255, 255), RGB(255, 255, 255));
 	TextOut(500, 450, "LockDelay : %d", p_data->tetLockTime);
 
-	TextOut(500, 470, "Score : %d", p_data->gameScore);
-	TextOut(500, 485, "Stage : %d", p_data->gameLevel);
+	TextOut(500, 470, "Score : %06d", p_data->gameScore);
+	TextOut(500, 485, "Level : %d", p_data->gameLevel);
 	TextOut(500, 500, "CurrSpinData : %d", p_data->tetData.currSpinState);
 	TextOut(490, 515, "%d", p_data->gameState);
 
