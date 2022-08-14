@@ -23,6 +23,24 @@ enum Tetromino {
 	GZTet     // Z
 };
 
+// 점수 체계
+enum Action {
+	Nothing,              // 0
+	Single,               // 100 x Level
+	Double,               // 300 x Level
+	Triple,               // 500 x Level
+	Tetris,               // 800 x Level
+	MiniT_Spin,           // 100 x Level
+	MiniT_SpinSingle,     // 200 x Level
+	T_Spin,               // 400 x Level
+	T_SpinSingle,         // 800 x Level
+	T_SpinDouble,         // 1200 x Level
+	T_SpinTriple,         // 1600 x Level
+	Back_to_BackBonus,    // 0.5 x Action Total
+	SoftDrop,             // 1 x n
+	HardDrop              // 2 x m
+};
+
 // 게임 상태
 #define STARTPAGE 1000    // 시작 페이지
 #define PLAYGAME  1001    // 플레이 중
@@ -47,8 +65,8 @@ enum Tetromino {
 	tet2 = tempTet;         \
 } while(0)
 
-// 스테이지에 따른 시간(Time By Stage)
-#define TBYS(gameStage) (UINT)(pow(0.8 - ((double)(gameStage - 1) * 0.007), gameStage - 1) * 1000)
+// 레벨에 따른 시간(Time By Level)
+#define TBYS(gameLevel) (UINT)(pow(0.8 - ((double)(gameLevel - 1) * 0.007), gameLevel - 1) * 1000)
 
 // 테트로미노 모양 데이터
 const POINT tetrominoesData[7][4] = { { { 0, 1 }, { 1, 1 }, { 2, 1 }, { 3, 1 } },      // I
