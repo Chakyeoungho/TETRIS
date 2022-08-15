@@ -482,10 +482,10 @@ void drawTetris(pGameData p_data)
 	Rectangle(460, 450, 550, 466, RGB(255, 255, 255), RGB(255, 255, 255));
 	TextOut(500, 450, "LockDelay : %d", p_data->tetLockTime);
 
-	TextOut(500, 470, "Score : %06d", p_data->gameScore);
-	TextOut(500, 485, "Level : %d", p_data->gameLevel);
-	TextOut(500, 500, "CurrSpinData : %d", p_data->tetData.currSpinState);
-	TextOut(490, 515, "%d", p_data->gameState);
+	TextOut(500, 465, "Score : %06d", p_data->gameScore);
+	TextOut(500, 480, "Level : %d", p_data->gameLevel);
+	TextOut(500, 495, "CurrSpinData : %d", p_data->tetData.currSpinState);
+	TextOut(500, 550, "%d", p_data->gameState);
 
 	for (int y = BUFFERZONE; y < FIELD_Y_NUM + BUFFERZONE; y++) {
 		for (int x = 0; x < FIELD_X_NUM; x++) {
