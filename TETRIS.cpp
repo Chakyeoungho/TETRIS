@@ -50,7 +50,7 @@ void setData(pGameData p_data);                       // 테트리스 데이터 
 void removeData(pGameData p_data);                    // 테트리스 데이터 제거
 void drawTetris(pGameData p_data);                    // 테트리스 그리기
 void spin(pGameData p_data, WPARAM spinDirection);    // 회전, SRS(Super Rotation System) 확인
-void drop(pGameData p_data);                      // 바닥에 닿았는지 검사 후 아래로 이동
+void drop(pGameData p_data);                          // 바닥에 닿았는지 검사 후 아래로 이동
 void checkGameOver(pGameData p_data);                 // 게임오버 확인
 
 // Lock Delay 타이머
@@ -81,6 +81,7 @@ TIMER LockDelayProc(NOT_USE_TIMER_DATA)
 
 				if (Action >= 3) ap_data->Action = T_Spin;
 			}
+
 			cascade(ap_data);
 			setTetromino(ap_data);
 			drawTetris(ap_data);
@@ -109,11 +110,11 @@ TIMER FrameProc(NOT_USE_TIMER_DATA)
 int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 {
 	pGameData p_data = (pGameData)GetAppData(); // 프로그램의 내부 데이터 주소를 가져온다.
-
-	if (p_data != NULL && p_data->gameState == PLAYGAME) {
-		if (a_message_id == WM_KEYDOWN) {  // 키보드의 버튼이 눌러졌을 때
-			// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
-			// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
+		
+	if (a_message_id == WM_KEYDOWN && p_data != NULL) {  // 키보드의 버튼이 눌러졌을 때
+		// 어떤 키를 눌렀는지에 대한 정보가 wParam 변수에 들어있다. VK는 Virtual Key의 약자이고
+		// 방향키는 VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT로 정의되어 있다.
+		if (p_data->gameState == PLAYGAME) {
 			switch (wParam) {
 			case VK_UP: case VK_CONTROL:   // 회전
 				p_data->isLastSpin = true;
@@ -201,6 +202,21 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				break;
 			}
 		}
+
+		if (wParam == VK_PAUSE) {
+			if (p_data->gameState == PLAYGAME) {
+				p_data->gameState = PAUSE;
+
+				SelectFontObject("굴림", 26, 1);
+				TextOut(100, 100, "PAUSE");
+				SelectFontObject("굴림", 12, 1);
+				ShowDisplay();
+			} else {
+				p_data->gameState = PLAYGAME;
+				checkGameOver(p_data);
+				drawTetris(p_data);
+			}
+		}
 	}
 
 	return 0;
@@ -211,6 +227,7 @@ ON_MESSAGE(NULL, NULL, NULL, NULL, NULL, OnUserMsg)
 int main()
 {
 	ChangeWorkSize(TETROMINO_SIZE * FIELD_X_NUM + 400, TETROMINO_SIZE * FIELD_Y_NUM);    // 윈도우 크기 조절
+	SelectFontObject("굴림", 12, 1);    // 글씨체, 글씨 크기 등 조정
 
 	waveOutSetVolume(0, (DWORD)0x25002500);    // 사운드 볼륨 조정 오른쪽 왼쪽
 	sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생

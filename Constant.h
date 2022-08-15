@@ -44,7 +44,8 @@ enum Action {
 // 게임 상태
 #define STARTPAGE 1000    // 시작 페이지
 #define PLAYGAME  1001    // 플레이 중
-#define GAMEOVER  1002    // 게임 오버
+#define PAUSE     1002    // 일시 정지
+#define GAMEOVER  1003    // 게임 오버
 
 // 타이머 아이디
 #define T_FRAME     2000    // 프레임
