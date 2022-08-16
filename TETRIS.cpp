@@ -15,7 +15,6 @@ typedef struct _TetrominoData {
 	BYTE tetPocket[2][7];         // 테트로미노 포켓
 	BYTE showTet[6];              // 미리보기
 	BYTE tetHold;                 // 홀드된 테트로미노
-	BYTE selectTet;               // 현재 테트로미노 선택
 	POINT drawTet[4];             // 그릴 테트로미노
 	POINT moveTet;                // 테트로미노 이동 좌표
 	BYTE currSpinState : 2;       // 현재 회전 상태 / 4개 플래그를 사용하기 편함
@@ -162,8 +161,10 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				}
 				break;
 			case VK_SPACE:    // 스페이스바
+			{    // switch문 안에서 변수 초기화를 위한 중괄호
 				checkGameOver(p_data);
-				p_data->Action = HardDrop;
+
+				bool isDrop = false;
 
 				while (isNotFloor(p_data)) {
 					removeData(p_data);
@@ -171,7 +172,9 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					setData(p_data);
 
 					p_data->gameScore += 2;
+					isDrop = true;
 				}
+				if (isDrop) p_data->Action = HardDrop;
 				cascade(p_data);
 
 				setTetromino(p_data);
@@ -179,7 +182,8 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 				p_data->isHold = false;
 				SetTimer(T_FRAME, TBYS(p_data->gameLevel), FrameProc);
-				break;
+				break; 
+			}
 			case 'Z':    // 홀드
 				if (p_data->tetData.tetHold == M_Tet) {
 					p_data->isHold = true;
@@ -197,6 +201,8 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					setData(p_data);
 					drawTetris(p_data);
 				}
+				break;
+			case 'R':    // 다시 시작
 				break;
 			default:
 				break;
@@ -242,7 +248,7 @@ int main()
 	InitWELLRNG1024a(init); // WELL Random 초기화
 
 	GameData data = { { { 0, }, }, 
-		{ M_Tet, { { 0, }, }, { 0, }, M_Tet, 0, { { 0, }, }, { 3, BUFFERZONE }, 0 }, 
+		{ M_Tet, { { 0, }, }, { 0, }, M_Tet, { { 0, }, }, { 3, BUFFERZONE }, 0 }, 
 		PLAYGAME, 0, 1, 0, 0, Nothing, false, true, false, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
@@ -303,17 +309,19 @@ void setImage()
 // 테트리미노 설정
 void setTetromino(pGameData p_data)
 {
-	if (p_data->tetData.selectTet == 7) {
-		p_data->tetData.selectTet = 0;
+	static BYTE selectTet = 0;
+
+	if (selectTet == 7) {
+		selectTet = 0;
 
 		// WELLRNG1024a() 기본 사용법
 		// double x = (double)WELLRNG1024a(); // 0.0 <= x < 1.0  실수 랜덤 생성
-		memcpy(p_data->tetData.tetPocket[0], p_data->tetData.tetPocket[1], sizeof(BYTE) * 7);
+		memcpy(p_data->tetData.tetPocket[0], p_data->tetData.tetPocket[1], sizeof(BYTE) * 7);    // 2번째 포켓을 1번째 포켓으로 복사
 
-		for (int i = 0; i < 7; i++) {
-			p_data->tetData.tetPocket[1][i] = (BYTE)((double)WELLRNG1024a() * 7);
+		for (int i = 0; i < 7; i++) {    // 2번째 포켓 설정
+			p_data->tetData.tetPocket[1][i] = (BYTE)((double)WELLRNG1024a() * 7);    // 랜덤 생성
 
-			for (int j = 0; j < i; j++) {
+			for (int j = 0; j < i; j++) {    // 포켓 중복 처리
 				if (p_data->tetData.tetPocket[1][i] == p_data->tetData.tetPocket[1][j]) {
 					i--;
 					break;
@@ -322,10 +330,10 @@ void setTetromino(pGameData p_data)
 		}
 	}
 
-	BYTE temp = p_data->tetData.selectTet + 1;
-	for (int i = 0; i < 6; i++)
-		p_data->tetData.showTet[i] = *(p_data->tetData.tetPocket[0] + temp++);
-	p_data->tetData.currTetromino = p_data->tetData.tetPocket[0][p_data->tetData.selectTet++];
+	BYTE temp = selectTet + 1;
+	for (int i = 0; i < 6; i++)    // 미리 보여줄 테트로미노
+		p_data->tetData.showTet[i] = *(p_data->tetData.tetPocket[0] + temp++);    // 2차원 배열을 1차원 배열처럼 사용
+	p_data->tetData.currTetromino = p_data->tetData.tetPocket[0][selectTet++];
 	memcpy(p_data->tetData.drawTet, tetrominoesData[p_data->tetData.currTetromino], sizeof(POINT) * 4);
 	p_data->tetData.moveTet = { 3, BUFFERZONE };
 	p_data->tetData.currSpinState = 0;

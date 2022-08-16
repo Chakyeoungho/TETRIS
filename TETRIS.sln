@@ -5,8 +5,6 @@ VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TETRIS", "TETRIS.vcxproj", "{D5245726-2E96-4F94-831D-32E9D984DAF7}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "TetrisSetup", "..\TetrisSetup\TetrisSetup.vdproj", "{1858C776-5D7C-49AE-84DF-779D9FFAEDA2}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,10 +19,6 @@ Global
 		{D5245726-2E96-4F94-831D-32E9D984DAF7}.Release|x64.ActiveCfg = Release|Win32
 		{D5245726-2E96-4F94-831D-32E9D984DAF7}.Release|x86.ActiveCfg = Release|Win32
 		{D5245726-2E96-4F94-831D-32E9D984DAF7}.Release|x86.Build.0 = Release|Win32
-		{1858C776-5D7C-49AE-84DF-779D9FFAEDA2}.Debug|x64.ActiveCfg = Debug
-		{1858C776-5D7C-49AE-84DF-779D9FFAEDA2}.Debug|x86.ActiveCfg = Debug
-		{1858C776-5D7C-49AE-84DF-779D9FFAEDA2}.Release|x64.ActiveCfg = Release
-		{1858C776-5D7C-49AE-84DF-779D9FFAEDA2}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
