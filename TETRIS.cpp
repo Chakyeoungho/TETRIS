@@ -249,9 +249,9 @@ int main()
 	pGameData ap_data = (pGameData)GetAppData();
 	setImage();    // 이미지 설정
 	memset(ap_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));    // 플레이 필드 M_Tet로 초기화
-	// x좌표 끝줄은 줄이 꽉 찼는지 확인하는 용도로 10으로 초기화
+	// x좌표 끝줄은 줄이 꽉 찼는지 확인하는 용도로 가로의 크기로 초기화
 	for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
-		ap_data->playfield[y][FIELD_X_NUM] = 10;
+		ap_data->playfield[y][FIELD_X_NUM] = FIELD_X_NUM;
 	}
 	// 테트로미노 포켓 설정
 	for (int i = 0; i < 2; i++) {
@@ -407,7 +407,7 @@ void cascade(pGameData p_data)
 		if (p_data->playfield[y][FIELD_X_NUM] == 0) {
 			moveLine = y;
 			clearedLine++;
-			while (p_data->playfield[moveLine][FIELD_X_NUM] != 10) {
+			while (p_data->playfield[moveLine][FIELD_X_NUM] != FIELD_X_NUM) {
 				memcpy(p_data->playfield[moveLine], p_data->playfield[moveLine - 1], sizeof(BYTE) * (FIELD_X_NUM + LINE_INFO));
 				moveLine--;
 			}
