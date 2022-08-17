@@ -25,7 +25,7 @@ typedef struct _GameData {
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];    // 플레이 필드
 	TetrominoData tetData;        // 테트로미노 데이터 구조체
 	WORD gameState;               // 현재 게임 상태
-	LONGLONG gameScore;           // 게임 점수
+	ULONGLONG gameScore;           // 게임 점수
 	BYTE gameLevel;               // 게임 레벨
 	WORD tetLockTime;             // 테트로미노 잠금 시간
 	BYTE chance;                  // 땅에 닿고 나서 움직이면 시간 초기화 되는 횟수
@@ -455,22 +455,22 @@ void cascade(pGameData p_data)
 
 	switch (clearedLine) {
 	case 0:
-		if (p_data->Action == T_Spin) p_data->gameScore += 400 * p_data->gameLevel;
+		if (p_data->Action == T_Spin) p_data->gameScore += 400 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 1:
-		if (p_data->Action == T_Spin) p_data->gameScore += 800 * p_data->gameLevel;
-		else p_data->gameScore += 100 * p_data->gameLevel;
+		if (p_data->Action == T_Spin) p_data->gameScore += 800 * (ULONGLONG)p_data->gameLevel;
+		else p_data->gameScore += 100 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 2:
-		if (p_data->Action == T_Spin) p_data->gameScore += 1200 * p_data->gameLevel;
-		else p_data->gameScore += 300 * p_data->gameLevel;
+		if (p_data->Action == T_Spin) p_data->gameScore += 1200 * (ULONGLONG)p_data->gameLevel;
+		else p_data->gameScore += 300 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 3:
-		if (p_data->Action == T_Spin) p_data->gameScore += 1600 * p_data->gameLevel;
-		else p_data->gameScore += 500 * p_data->gameLevel;
+		if (p_data->Action == T_Spin) p_data->gameScore += 1600 * (ULONGLONG)p_data->gameLevel;
+		else p_data->gameScore += 500 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 4:
-		p_data->gameScore += 800 * p_data->gameLevel;
+		p_data->gameScore += 800 * (ULONGLONG)p_data->gameLevel;
 		break;
 	default:
 		break;

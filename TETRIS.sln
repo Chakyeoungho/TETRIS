@@ -5,6 +5,8 @@ VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TETRIS", "TETRIS.vcxproj", "{D5245726-2E96-4F94-831D-32E9D984DAF7}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "TETRIS_Setup", "TETRIS_Setup\TETRIS_Setup.vdproj", "{BF322BE6-C6DF-4076-8A1F-AB85041F6B4D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -19,6 +21,10 @@ Global
 		{D5245726-2E96-4F94-831D-32E9D984DAF7}.Release|x64.ActiveCfg = Release|Win32
 		{D5245726-2E96-4F94-831D-32E9D984DAF7}.Release|x86.ActiveCfg = Release|Win32
 		{D5245726-2E96-4F94-831D-32E9D984DAF7}.Release|x86.Build.0 = Release|Win32
+		{BF322BE6-C6DF-4076-8A1F-AB85041F6B4D}.Debug|x64.ActiveCfg = Debug
+		{BF322BE6-C6DF-4076-8A1F-AB85041F6B4D}.Debug|x86.ActiveCfg = Debug
+		{BF322BE6-C6DF-4076-8A1F-AB85041F6B4D}.Release|x64.ActiveCfg = Release
+		{BF322BE6-C6DF-4076-8A1F-AB85041F6B4D}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
