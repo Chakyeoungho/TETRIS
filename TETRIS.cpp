@@ -202,45 +202,12 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 					drawTetris(p_data);
 				}
 				break;
-			case 'R':    // 다시 시작
-			{    // switch문 안에서 변수 초기화를 위한 중괄호
-				removeData(p_data);
-				GameData data = { { { 0, }, },
-					{ M_Tet, { { 0, }, }, { 0, }, M_Tet, { { 0, }, }, { 3, BUFFERZONE }, 0 },
-					PLAYGAME, 0, 1, 0, 0, Nothing, false, true, false, { 0, } };
-
-				memset(data.playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));    // 플레이 필드 M_Tet로 초기화
-				// x좌표 끝줄은 줄이 꽉 찼는지 확인하는 용도로 가로의 크기로 초기화
-				for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
-					data.playfield[y][FIELD_X_NUM] = FIELD_X_NUM;
-				}
-				// 테트로미노 포켓 설정
-				for (int i = 0; i < 2; i++) {
-					for (int j = 0; j < 7; j++) {
-						data.tetData.tetPocket[i][j] = (BYTE)((double)WELLRNG1024a() * 7);
-
-						for (int k = 0; k < j; k++) {
-							if (data.tetData.tetPocket[i][j] == data.tetData.tetPocket[i][k]) {
-								j--;
-								break;
-							}
-						}
-					}
-				}
-				SetAppData(&data, sizeof(GameData));
-				setImage();    // 이미지 설정
-				setTetromino(&data);    // 테트로미노 설정
-				drawTetris(&data);      // 테트리스 그리기
-
-				SetTimer(T_FRAME, TBYS(data.gameLevel), FrameProc);
-				break;
-			}
 			default:
 				break;
 			}
 		}
 
-		if (wParam == VK_PAUSE) {
+		if (wParam == VK_PAUSE || wParam == 'P') {    // 일시 정지
 			if (p_data->gameState == PLAYGAME) {
 				p_data->gameState = PAUSE;
 
@@ -253,6 +220,32 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 				checkGameOver(p_data);
 				drawTetris(p_data);
 			}
+		}
+
+
+		if (wParam == 'R') {    // 다시 시작
+			memset(p_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));    // 플레이 필드 M_Tet로 초기화
+			// x좌표 끝줄은 줄이 꽉 찼는지 확인하는 용도로 가로의 크기로 초기화
+			for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
+				p_data->playfield[y][FIELD_X_NUM] = FIELD_X_NUM;
+			}
+			// 테트로미노 포켓 설정
+			for (int i = 0; i < 2; i++) {
+				for (int j = 0; j < 7; j++) {
+					p_data->tetData.tetPocket[i][j] = (BYTE)((double)WELLRNG1024a() * 7);
+
+					for (int k = 0; k < j; k++) {
+						if (p_data->tetData.tetPocket[i][j] == p_data->tetData.tetPocket[i][k]) {
+							j--;
+							break;
+						}
+					}
+				}
+			}
+			setTetromino(p_data);    // 테트로미노 설정
+			drawTetris(p_data);      // 테트리스 그리기
+
+			SetTimer(T_FRAME, TBYS(p_data->gameLevel), FrameProc);
 		}
 	}
 
@@ -453,20 +446,22 @@ void cascade(pGameData p_data)
 		}
 	}
 
+	p_data->Action += clearedLine;
+
 	switch (clearedLine) {
 	case 0:
 		if (p_data->Action == T_Spin) p_data->gameScore += 400 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 1:
-		if (p_data->Action == T_Spin) p_data->gameScore += 800 * (ULONGLONG)p_data->gameLevel;
+		if (p_data->Action == T_SpinSingle) p_data->gameScore += 800 * (ULONGLONG)p_data->gameLevel;
 		else p_data->gameScore += 100 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 2:
-		if (p_data->Action == T_Spin) p_data->gameScore += 1200 * (ULONGLONG)p_data->gameLevel;
+		if (p_data->Action == T_SpinDouble) p_data->gameScore += 1200 * (ULONGLONG)p_data->gameLevel;
 		else p_data->gameScore += 300 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 3:
-		if (p_data->Action == T_Spin) p_data->gameScore += 1600 * (ULONGLONG)p_data->gameLevel;
+		if (p_data->Action == T_SpinTriple) p_data->gameScore += 1600 * (ULONGLONG)p_data->gameLevel;
 		else p_data->gameScore += 500 * (ULONGLONG)p_data->gameLevel;
 		break;
 	case 4:
@@ -475,8 +470,6 @@ void cascade(pGameData p_data)
 	default:
 		break;
 	}
-
-	p_data->Action += clearedLine;
 
 	totalcClearedLine += clearedLine;
 	if (totalcClearedLine / 10 >= 15) p_data->gameLevel = 15;

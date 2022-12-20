@@ -7,7 +7,7 @@
 // 제작자 : 김성엽 (tipsware@naver.com, https://blog.naver.com/tipsware, https://cafe.naver.com/easywin32)
 //
 // 개발 시작 : 2019년 9월 3일 화요일
-// 최근 업데이트 : 2021년 1월 10일 일요일
+// 최근 업데이트 : 2022년 8월 24일 수요일
 //
 // 이 라이브러리의 저작권은 '(주)팁스웨어'에 있습니다.
 // 이 라이브러리는 C 언어를 공부하는 사람들을 위해 만들어졌습니다.
@@ -29,6 +29,16 @@ struct TargetData
 	int win_x, win_y, win_cx, win_cy;
 	int x, y, cx, cy;
 };
+
+#define MAX_ANI_IMAGE_COUNT     32    // 애니메이션을 위한 최대 이미지 개수
+
+typedef struct TW_AnimationImageData
+{
+	// 애니메이션을 구성하는 이미지의 개수와 현재 출력중인 이미지의 위치
+	UINT16 image_count, index;
+	// 애니메이션에 사용할 이미지의 목록
+	void *p_image[MAX_ANI_IMAGE_COUNT];
+} TW_AID;
 
 #define IMAGE_BMP   0
 #define IMAGE_JPEG  1
@@ -216,6 +226,18 @@ namespace EasyAPI_Tipsware
 	void TransparentDrawGP(void *ap_image, int a_x, int a_y, int a_width, int a_height, COLORREF a_remove_color);
 	void TransparentDrawGP(void *ap_image, int a_x, int a_y, double a_cx_rate, double a_cy_rate, COLORREF a_remove_color);
 
+	// 지정한 경로에 있는 같은 계열의 이미지 파일을 읽는 함수
+	// ".\\image\\run_00.png", ".\\image\\run_01.png", ".\\image\\run_02.png" 파일을
+	// 읽고 싶다면 LoadImageAID(L".\\image\\run_", 3); 이라고 호출한다.
+	// 파일 확장자는 .png만 가능하고 패턴 번호는 00, 01, ... 순서로 나열해야 한다.
+	void LoadImageAID(TW_AID *ap_data, const char *ap_path, UINT16 a_count);
+	// 할당된 이미지를 모두 제거하는 함수 (호출하지 않아도 프로그램 종료시에 자동으로 제거됩니다.)
+	void DeleteImageAID(TW_AID *ap_data);
+	// 현재 위치의 이미지를 ah_dc에 출력(비율로 축소 또는 확대)하고 다음 이미지 위치로 이동하는 함수
+	UINT16 DrawImageAID(TW_AID *ap_data, int a_x, int a_y, double a_cx_rate, double a_cy_rate);
+	// 지정한 위치의 이미지를 ah_dc에 출력(비율로 축소 또는 확대)하는 함수
+	void DrawImageByIndexAID(TW_AID *ap_data, int a_x, int a_y, int a_index, double a_cx_rate, double a_cy_rate);
+
 	HDC GetDCGP(void *ap_image);
 	HBITMAP GetBitmapGP(void *ap_image);
 	int GetWidthGP(void *ap_image);
@@ -327,6 +349,14 @@ namespace EasyAPI_Tipsware
 	void MouseClickUp(int a_x, int a_y, int a_is_left = 1);
 
 	void GetMousePosFromTarget(TargetData *ap_target, int *ap_x, int *ap_y, int a_target_x, int a_target_y);
+
+	void *MakeTargetBaseData(int a_x, int a_y, int a_cx, int a_cy);  // 내부 캡쳐 이미지 엔진을 생성하는 함수
+	void DeleteTargetBaseData();
+
+	void *GetTargetBaseData();
+	UINT32 GetTargetBaseImageDataSize();
+	UINT8 *GetTargetBaseImageData();
+
 	void UpdateTargetImage();
 	void UpdateTargetPos(TargetData *ap_target);
 	// a_is_area_type (0: Client Area, 1: Window Area, 2: Screen Area) - 32Bit Color Only
@@ -342,13 +372,21 @@ namespace EasyAPI_Tipsware
 	// ap_image_data에 저장된 이미지 패턴의 폭은 a_image_width이고 높이는 a_image_height이다.
 	void CheckOBjectPos(RECT *p_target_rect, int a_x, int a_y, unsigned int a_org_color, unsigned int a_change_color, unsigned int *ap_image_data, int a_image_width, int a_image_height);
 
+	// 이미지를 카톡창으로 전송하는 함수
+	void SendImageToTalk(int a_cx, int a_cy, UINT8 *ap_image, int a_image_size, HWND ah_send_wnd);
+	// 이미지 전송을 확인하는 창을 체크해서 전송 버튼을 눌러주는 함수
+	HWND CheckSendImageDlg();
+
 	// 클립보드 관련 함수
 	int CopyTextToClipboard(const char *ap_string);
 	int CopyTextFromClipboard(char **ap_string, char a_is_clear);
 	HBITMAP MakeDupBitmap(HBITMAP ah_bitmap);
-	HBITMAP MakeDupBitmap(HBITMAP ah_bitmap, unsigned int *ap_image_data);
+	HBITMAP MakeDupBitmap(HBITMAP ah_bitmap, void *ap_image_data);
+	HBITMAP MakeDupBitmap(int a_cx, int a_cy, int a_bits, void *ap_image_data, int a_data_size);
+
 	HBITMAP CopyBitmapFromClipBoard();
 	void CopyBitmapToClipBoard(HBITMAP ah_bitmap);
+	void CopyBitmapToClipBoard(int a_cx, int a_cy, int a_bits, void *ap_image_data, int a_data_size);
 
 	// Common Dialog 관련 함수
 	int ChooseOpenFileName(char *ap_open_path, int a_path_size, const char *ap_filter = "All\0*.*\0Text\0*.txt\0", int a_filter_index = 1, const char *ap_init_path = NULL, int a_add_attr = 0);
@@ -368,6 +406,19 @@ namespace EasyAPI_Tipsware
 	int Serial_WriteCommData(void *ap_object, const char *ap_data, int a_length, int(*ap_error_process)(DWORD, COMSTAT) = NULL);
 	void Serial_ClearEvent(void *ap_object, int a_tx = 1, int a_rx = 1);
 	void DestroySerialObject(void *ap_object);
+
+	// 시스템에 등록된 장치 목록을 얻는 함수
+	int GetRegisteredPrinterList(char a_printer_list[][512], int *ap_def_index);
+	// 프린터 장치와 드라이버의 이름을 얻는 함수
+	int GetNameFromPrinterInfo(char *ap_driver_name, char *ap_device_name, char *ap_printer_info);
+	// 프린터에 정보를 출력하기 위한 DC를 얻는 함수
+	// 출력 모드를 변경한다. 0.1 mm단위, 증가 방향(x → , y ↑), A4 용지의 크기: 210mm x 297mm (2100 x -2970)
+	HDC CreatePrintDC(char *ap_driver_name, char *ap_device_name);
+	// 사용할 폰트를 직접 생성하는 함수
+	HFONT CreateDirectFont(const char *ap_name, int a_size, int a_bold, int a_italic, int a_underline, int a_strikeout);
+	// 엑셀 파일에서 시트를 분리해주는 함수
+	int GetExcelSheetFromZip(const char *ap_excel_file_name);
+
 }
 
 extern const char *gp_app_name;

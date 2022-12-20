@@ -81,6 +81,8 @@ const char *gp_window_title = "https://blog.naver.com/tipsware";
 int g_menu_id = 0;
 // 응용 프로그램이 사용할 메인 아이콘의 ID입니다. (0이면 운영체제가 제공하는 기본 아이콘을 사용한다는 뜻입니다.)
 int g_system_icon_id = 0;
+// 응용 프로그램이 사용할 확장 윈도우 속성과 기본 윈도우 기본 속성
+int g_ex_wnd_style = 0, g_wnd_style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
 
 using namespace EasyAPI_Tipsware;
 
@@ -97,5 +99,9 @@ using namespace EasyAPI_Tipsware;
 #define CMD_MESSAGE(command) SystemMessageMap g_system_map(NULL, NULL, NULL, command, NULL, NULL);
 #define CMD_USER_MESSAGE(command, destory, user_msg) SystemMessageMap g_system_map(NULL, NULL, NULL, command, destory, user_msg);
 #define ON_MESSAGE(left_down, left_up, move, command, destory, user_msg) SystemMessageMap g_system_map(left_down, left_up, move, command, destory, user_msg);
+
+// 중심점과 반지름을 사용하여 정사각형과 원 좌표를 구성하는 매크로 함수
+#define G_POS(pos, r) pos.x - r, pos.y - r, pos.x + r, pos.y + r
+#define G_PPOS(pos, r) pos->x - r, pos->y - r, pos->x + r, pos->y + r
 
 #endif
