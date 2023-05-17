@@ -224,6 +224,8 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 
 
 		if (wParam == 'R') {    // 다시 시작
+			p_data->gameState = PLAYGAME;
+			sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생
 			memset(p_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));    // 플레이 필드 M_Tet로 초기화
 			// x좌표 끝줄은 줄이 꽉 찼는지 확인하는 용도로 가로의 크기로 초기화
 			for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
