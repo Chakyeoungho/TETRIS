@@ -35,6 +35,8 @@ struct ExpDataType {
 	};
 };
 
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <WinSock2.h>
 #include "EasyWin32.h"
 
 #pragma comment(lib, "gdiplus")
@@ -85,6 +87,12 @@ int g_system_icon_id = 0;
 int g_ex_wnd_style = 0, g_wnd_style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
 
 using namespace EasyAPI_Tipsware;
+using namespace TW_NeoServerSocket;
+using namespace TW_NeoClientSocket;
+
+#ifndef _USE_INIT_WINDOW_
+void InitWindow() { }
+#endif
 
 #define printf TextOut
 

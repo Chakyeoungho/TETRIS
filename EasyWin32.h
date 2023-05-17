@@ -7,7 +7,7 @@
 // 제작자 : 김성엽 (tipsware@naver.com, https://blog.naver.com/tipsware, https://cafe.naver.com/easywin32)
 //
 // 개발 시작 : 2019년 9월 3일 화요일
-// 최근 업데이트 : 2022년 8월 24일 수요일
+// 최근 업데이트 : 2023년 4월 3일 월요일 (소켓 관련 업데이트, 정형님 생일에 맞춰서 업데이트 하네요. 생일 축하합니다.)
 //
 // 이 라이브러리의 저작권은 '(주)팁스웨어'에 있습니다.
 // 이 라이브러리는 C 언어를 공부하는 사람들을 위해 만들어졌습니다.
@@ -150,6 +150,7 @@ namespace EasyAPI_Tipsware
 	void ListBox_ChangeDrawFunc(void *ap_ctrl, void *afp_draw);
 	int ListBox_AddString(void *ap_ctrl, const char *ap_string, UINT8 a_auto_select = 1);
 	int ListBox_InsertString(void *ap_ctrl, INT32 a_index, const char *ap_string, UINT8 a_auto_select = 1);
+	int ListBox_PrintFormat(void *ap_ctrl, const char *ap_format, ...);
 	int ListBox_GetTextLength(void *ap_ctrl, INT32 a_index);
 	int ListBox_GetText(void *ap_ctrl, INT32 a_index, char *ap_string, int a_max_len);
 	void ListBox_SetCurSel(void *ap_ctrl, INT32 a_index);
@@ -171,6 +172,7 @@ namespace EasyAPI_Tipsware
 	void ComboBox_ChangeDrawFunc(void *ap_ctrl, void *afp_draw);
 	int ComboBox_AddString(void *ap_ctrl, const char *ap_string, UINT8 a_auto_select = 1);
 	int ComboBox_InsertString(void *ap_ctrl, INT32 a_index, const char *ap_string, UINT8 a_auto_select = 1);
+	int ComboBox_PrintFormat(void *ap_ctrl, const char *ap_format, ...);
 	int ComboBox_GetTextLength(void *ap_ctrl, INT32 a_index);
 	int ComboBox_GetText(void *ap_ctrl, INT32 a_index, char *ap_string, int a_max_len);
 	void ComboBox_SetCurSel(void *ap_ctrl, INT32 a_index);
@@ -188,11 +190,18 @@ namespace EasyAPI_Tipsware
 	INT32 ComboBox_FindStringExact(void *ap_ctrl, INT32 a_index, const char *ap_string);
 	void ComboBox_SetItemHeight(void *ap_ctrl, INT32 a_height);
 
-	UINT32 Edit_GetLength(void *ap_ctrl);
+	// 에디트에 입력된 길이를 얻는 함수
+	UINT32 Edit_GetLength(void *ap_ctrl);  
+	// 에디트의 배경에 문자열을 출력하는 함수
+	void Edit_SetBgTipText(void *ap_ctrl, const char *ap_text, int a_text_len, COLORREF a_color);
+	// 에디트 배경에 쓰인 문자열을 지우는 함수
+	void Edit_ResetTipText(void *ap_ctrl);
+	// 지정한 텍스트 파일에서 문자열을 읽어 에디트에 표시하는 함수
 	INT32 Edit_ReadTextFromFile(void *ap_ctrl, const char *ap_file_path);
+	// 에디트에 입력된 문자열을 지정한 텍스트에 저장하는 함수
 	INT32 Edit_SaveTextToFile(void *ap_ctrl, const char *ap_file_path);
 
-	void EnableEnterKey(void *ap_ctrl);
+	void EnableEnterKey(void *ap_ctrl, WNDPROC afp_filter = NULL);
 	void Clear(int a_index = 0, COLORREF a_color = RGB(255, 255, 255));
 
 	void SetAppData(void *ap_data, int a_data_size);
@@ -213,7 +222,7 @@ namespace EasyAPI_Tipsware
 
 	// ...GP 는 GDI+ 관련 함수들입니다!
 	// ap_image_path 경로에 있는 이미지 파일을 읽는 함수!
-	void *LoadImageGP(const char *ap_image_path);
+	void *LoadImageGP(const char *ap_image_path, UINT8 a_is_alpha_fix = 0, UINT8 a_alpha_limit = 254);
 	// ap_image에 저장된 이미지 정보를 ap_image_path경로에 a_image_type 형식의 이미지 파일로 저장합니다.
 	void SaveImageGP(void *ap_image, const char *ap_image_path, int a_image_type = IMAGE_PNG);
 	void *CreateBitmapGP(int a_width, int a_height, DWORD a_flag = 0, int a_bpp = 32);
@@ -419,6 +428,221 @@ namespace EasyAPI_Tipsware
 	// 엑셀 파일에서 시트를 분리해주는 함수
 	int GetExcelSheetFromZip(const char *ap_excel_file_name);
 
+	UINT32 GetFIleDataToMemory(UINT8 **ap_data, const char *ap_file_path);
+	UINT8 IsNormalUnicodeChar(const wchar_t a_char);
+	// 유니코드 문자열을 일반 아스키 문자열로 변경하는 함수
+	int UnicodeToAscii(char **ap_dest_str, const wchar_t *ap_src_str);
+	int UnicodeToSimpleAscii(char *ap_dest_str, const wchar_t *ap_src_str);
+
+	// 리다이렉션 관련 함수
+	void *CreateRedirectionData();  // 리다이렉션을 사용하기 위해 필요한 데이터를 만드는 함수
+	void DestroyRedirectionData(void *ap_data); // 리다이렉션을 사용하기 위해 만든 데이터를 제거하는 함수
+	void StopRedirection(void *ap_data); // 진행 중인 리다이렉션 작업을 중지 시키는 함수
+	int IsExistPath(const char *ap_path);  // 지정한 경로에 있는 파일 또는 폴더가 있는지 체크하는 함수
+	int GetRedirectionData(void *ap_data, char *ap_str, int a_limit);  // 진행중인 리다이렉션 정보의 상태를 얻는 함수
+	int CheckRedirectionState(void *ap_data);  // 리다이렉션 작업이 중단되었는지 체크하는 함수
+
+	// 리다이렉션과 관련된 타이머 정보를 다시 설정하는 함수
+	void ModifyRedirectionTimerInfo(void *ap_data, UINT32 a_interval = 300, UINT32 a_timer_id = 77);
+	// 지정된 경로에 있는 프로그램을 사용해서 리다이렉션을 시작하는 함수
+	int ExecRedirection(void *ap_data, const char *ap_exe_path, const char *ap_arg_data, 
+			const char *ap_working_path, void *afp_timer_proc);
+}
+
+#define MAX_TABLE_COUNT          65536  // 내부 구성 로직 수
+#define COMMON_RECV_SIZE          8192  // 기본 수신 버퍼 (8K)
+#define COMMON_SEND_SIZE          8192  // 기본 송신 버퍼 (8K)
+#define USER_RECV_SIZE          204800  // 기본 수신 버퍼 (200K)
+#define USER_SEND_SIZE          204800  // 기본 송신 버퍼 (200K)
+#define TSB_SIZE                  4096  // 이 라이브러리 내에서 임시로 사용할 버퍼의 크기
+
+#define SERVER_SOCKET_ACCEPT     21901  // 서버에 클라이언트가 접속할 때 발생하는 메시지
+#define SERVER_SOCKET_CLIENT     21902  // 서버에 접속한 클라이언트와 통신 또는 해제할 때 발생하는 메시지
+#define SERVER_SOCKET_USER       21903  // 서버에 로그인한 사용자와 통신 또는 해제할 때 발생하는 메시지
+
+#define CLIENT_SOCKET_CONNECT    21911  // 클라이언트가 서버에 접속을 시도한 결과를 알려주는 메시지
+#define CLIENT_SOCKET_COMMON     21912  // 서버와 통신 또는 접속이 해제될 때 발생하는 메시지
+
+#define SERVER_STATE_NOTIFY      21950  // 서버 소켓의 상태를 전송하는 메시지
+#define CLIENT_STATE_NOTIFY      21951  // 클라이언트 소켓의 상태를 전송하는 메시지
+
+// [네트워크 접두어 규칙]  Client -> Server (Request) : REQ_,  Server -> Client (Answer) : ANS_
+#define ANS_WELCOME_MSG             0    // S -> C 접속 허락 메시지
+#define ANS_ALIVE_MSG               1    // S -> C 접속 유지 메시지
+#define REQ_MAKE_ID                 6    // C -> S 계정 등록을 요청하는 메시지
+#define ANS_MAKED_ID                7    // S -> C 계정 등록이 성공됨
+#define REQ_LOGIN_DATA             10    // C -> S 로그인 시도
+#define ANS_LOGIN_OK               11    // S -> C 로그인 성공
+#define ANS_LOGIN_FAIL             12    // S -> C 로그인 실패
+#define ANS_SYSTEM_MESSAGE         13    // S -> C 서버에서 전달된 시스템 상태 메시지   
+
+#define LEN_TO_SIZE(x)                (x+1) // 문자열 길이를 문자열을 저장하는데 필요한 크기로 변경
+#define SIZE_TO_LEN(x)                (x-1) // 문자열을 저장하는데 필요한 크기를 문자열 길이로 변경
+#define PushStrToStream(s, str, size) *s++ = size; memcpy(s, str, size); s += size
+
+struct NeoClientData  // 1개의 클라이언트 정보를 저장할 구조체
+{
+	UINT8 msg_id;                // 현재 처리중인 네트워크 메시지 ID
+	UINT32 data_size, cur_size;  // 전체 수신할 크기와 현재 수신된 크기
+	UINT8 *p_recv_data;          // 수신된 데이터의 실제 정보
+	SOCKET h_socket;             // 개별 클라이언트와 통신할 소켓 핸들
+	char ip_address[16];         // 접속한 클라이언트의 주소
+	UINT32 connect_time;         // 30초 이내에 로그인을 하는지 체크
+};
+
+struct LoginData
+{
+	char id[32];                 // 아이디
+	char password[32];           // 암호
+};
+
+typedef struct NeoUserData
+{
+	UINT8 level;  // (예시) 0:손님, 1:일반, 2:우수, 3:운영진, 4:관리자
+	UINT8 id_len, password_len, name_len, etc_len;  // 문자열 길에는 NULL 문자 제외
+	char id[32];                // 사용자 아이디
+	char password[32];          // 암호
+	char name[32];              // 이름
+	char etc[128];              // 기타 정보
+	UINT32 last_connected_time; // 마지막으로 접속한 시간 정보
+	void *p_ext;                // 추가 정보가 필요한 경우 사용
+} NUD;
+
+typedef struct NeoRuntimeUserData
+{
+	NUD info;  // 사용자 기본 정보
+
+	UINT8 is_try_pw_count;       // 로그인 시도 횟수
+	UINT8 is_block;              // 로그인 시도를 10번 실패하면 계정 사용 중지!
+	UINT8 ip_len;                // ip 주소의 길이
+	UINT8 key;                   // 통신에 사용할 키
+	UINT8 msg_id;                // 현재 처리중인 네트워크 메시지 ID
+	UINT32 data_size, cur_size;  // 전체 수신할 크기와 현재 수신된 크기
+	UINT32 last_use_time;        // 가장 마지막에 소켓을 사용한 시간 (송신, 수신 포함)
+	UINT8 *p_recv_data;          // 수신된 데이터의 실제 정보
+	char ip[16];                 // 접속한 사용자의 IP 주소
+	SOCKET h_socket;             // 접속한 클라이언트의 소켓 핸들
+} NRUD;
+
+struct NeoServerData;
+typedef void (*FP_EVENT_STR)(NeoServerData *ap_server, const char *ap_string);  // 이벤트를 추가하기 위한 함수
+typedef int (*FP_USER_MSG)(NeoServerData *ap_server, NRUD *ap_user); // 사용자와 통신하기 위해 정의한 함수
+typedef void (*FP_USER_NOTIFY)(NeoServerData *ap_server, NRUD *ap_user, UINT32 a_state); // 사용자 상태 통보용 함수
+
+struct NeoServerData
+{
+	SOCKET h_listen_socket;            // 클라이언트의 접속을 처리하기 위한 소켓 핸들
+	UINT8 *p_send_data, *p_recv_data;  // 클라이언트와 데이터를 전송하거나 수신할 때 사용할 메모리
+	char *p_buffer1, *p_buffer2;       // TSB_SIZE 크기로 할당
+	UINT8 base_key;                    // 프로토콜에 사용할 기본 키
+	UINT16 client_count;               // 접속 시도에 사용할 기본 클라이언트 수
+	UINT16 user_count;                 // 관리할 실제 사용자 수
+	NeoClientData *p_clients;          // 접속한 클라이언트 정보
+	NRUD *p_users;                     // 등록된 사용자 정보
+	NRUD *p_last_user;                 // 사용자 정보에서 가장 마지막에 위치한 사용자 위치가 저장된 메모리의 주소
+
+	void *p_table[MAX_TABLE_COUNT];    // 이 라이브러리가 사용하는 내부 테이블
+	FP_USER_MSG p_user_msg_func;       // 사용자가 전송한 메시지를 처리할 함수의 주소
+	FP_EVENT_STR p_event_func;         // 이벤트 로그를 처리할 함수의 주소
+	FP_USER_NOTIFY p_user_notify_func; // 사용자 상태를 통보할때 사용할 함수의 주소
+};
+
+namespace TW_NeoServerSocket
+{
+	// 현재 서버가 실행된 컴퓨터에서 사용 가능한 IP 목록을 얻는 함수
+	int GetLocalNetworkAddress(char ap_ip_list[][16]);
+	// 서버 서비스의 정보를 초기화한다.
+	void InitServerData(NeoServerData *ap_server, FP_USER_MSG ap_user_msg_func, FP_EVENT_STR ap_event_func, FP_USER_NOTIFY ap_user_notify_func, int a_max_client_count = 50, int a_max_user_count = 100, int a_key = 0x29);
+	// 리슨 서비스를 시작하는 함수
+	void StartListenService(const char *ap_ip_address, int a_port, NeoServerData *ap_server);
+	// 서버 서비스를 위해 생성했던 정보를 제거하는 함수
+	void CleanUpServerData(NeoServerData *ap_server);
+	// 사용중인 서버 소켓과 관련된 정보를 모두 제거하는 함수
+	void DestroyServerSocket(NeoServerData *ap_server);
+	// 대기 없이 소켓을 닫는 함수 (closesocket으로 대체 가능)
+	void CloseSocketNoWait(SOCKET ah_socket);
+
+	// 클라이언트 정보를 저장할 빈 슬롯을 찾는 함수
+	NeoClientData *CheckEmptyCommonSlot(NeoServerData *ap_server);
+	// 클라이언트로 데이터를 전송하는 함수, (6바이트 프레임 구성 : "[ Key(1), Message ID(1), Body size(4)] +  Body Data")
+	void SendCommonFrameData(NeoServerData *ap_server, NeoClientData *ap_client, UINT8 a_msg_id, const void *ap_data, UINT32 a_size);
+	// 클라이언트 접속 시도를 처리하는 함수
+	void ProcessCommonAccept(NeoServerData *ap_server);
+	// 특정 클라이언트가 프로토콜 오류로 해제할 때 사용하는 함수
+	void DisconnectCommonClientByError(NeoServerData *ap_server, NeoClientData *ap_client, const char *ap_error_msg);
+	// 수신된 데이터가 프로토콜 형식에 맞는지 그리고 완전히 수신되었는지 진행하는 함수
+	int ProcessingCommonMessage(NeoServerData *ap_server, NeoClientData *ap_client, UINT8 *ap_recv_data, int a_recv_size);
+	// 소켓에 발생하는 이벤트를 처리하는 함수
+	void ProcessCommonSocketEvent(NeoServerData *ap_server, SOCKET ah_socket, int a_event_type);
+	// 아이디를 구성한 문자열의 유효성을 검사하는 함수
+	int CheckStringThatMakesUpID(const char *ap_id_str);
+	// 중복된 ID를 가진 사용자를 찾는 함수
+	NRUD *GetDupUserByID(NeoServerData *ap_server, NRUD *ap_cur_user, char *ap_id, int a_len);
+	// 사용자 정보에서 아직 사용되지 않은 공간을 찾는 함수
+	NRUD *GetEmptySlot(NeoServerData *ap_server);
+
+
+	//// 로그인된 사용자를 위한 함수 ////
+
+	// 사용자 목록에서 실제로 등록된 마지막 사용자의 주소를 설정하는 함수
+	void SetLastUser(NeoServerData *ap_server, NRUD *ap_last_users);
+	// 문자열의 길이를 구하는 함수. 하지만 이 문자열의 길이는 a_max_len보다 클수 없다.
+	int GetStringLength(const char *ap_str, int a_max_len);
+	// 로그인 정보를 등록된 사용자와 비교하는 함수
+	NRUD *CheckLoginData(NeoServerData *ap_server, LoginData *ap_data);
+	// 접속된 사용자를 강제로 접속 해제시킨다.
+	void CloseUserSocket(NeoServerData *ap_server, NRUD *ap_user, char a_reset_flag);
+	// 클라이언트로 데이터를 전송하는 함수, (6바이트 프레임 구성 : "[ Key(1), Message ID(1), Body size(4)] +  Body Data")
+	void SendUserFrameData(NeoServerData *ap_server, NRUD *ap_user, UINT8 a_msg_id, const void *ap_data, UINT32 a_size);
+	// 접속한 전체 사용자에게 메시지를 보내는 함수
+	void SendBroadcastUserFrameData(NeoServerData *ap_server, UINT8 a_msg_id, const void *ap_data, UINT32 a_size);
+	// 지정한 사용자들에게 메시지를 보내는 함수
+	void SendBroadcastUserFrameDataEx(NeoServerData *ap_server, NRUD **ap_user, int a_count, UINT8 a_msg_id, const void *ap_data, UINT32 a_size);
+	// 사용자 소켓에 발생한 이벤트를 처리하는 함수
+	void ProcessUserSocketEvent(NeoServerData *ap_server, SOCKET ah_socket, int a_event_type);
+	// 수신된 데이터가 프로토콜 형식에 맞는지 그리고 완전히 수신되었는지 진행하는 함수
+	int ProcessingUserMessage(NeoServerData *ap_server, NRUD *ap_user, UINT8 *ap_recv_data, int a_recv_size);
+	// 특정 사용자 오류로 연결을 해제할 때 사용하는 함수
+	void DisconnectUserByError(NeoServerData *ap_server, NRUD *ap_user, const char *ap_error_msg, char a_reset_flag);
+}
+
+
+// 클라이언트 소켓 파트
+
+struct NeoSocketData;
+typedef void (*FP_EVENT_STR_CLIENT)(NeoSocketData *ap_client, const char *ap_string);  // 이벤트를 추가하기 위한 함수
+typedef int (*FP_USER_MSG_CLIENT)(NeoSocketData *ap_client); // 서버와 통신하기 위해 정의한 함수
+typedef void (*FP_CLIENT_NOTIFY)(NeoSocketData *ap_client, UINT32 a_state); // 클라이언트 상태 통보용 함수
+
+struct NeoSocketData
+{
+	UINT8 msg_id, is_connected;  // 현재 처리중인 네트워크 메시지 ID, 서버와의 접속 상태(0:접속안됨, 1:연결중, 2:연결상태, 3: 로그인 상태)
+	UINT8 base_key;  // 통신에 사용할 기본 키값
+	UINT32 data_size, cur_size;  // 전체 수신할 크기와 현재 수신된 크기
+	UINT8 *p_recv_data;          // 수신된 데이터의 실제 정보
+	UINT8 *p_send_data, *p_temp_recv_data; // 서버와 데이터를 전송하거나 수신할 때 사용할 메모리
+	SOCKET h_socket;  // 서버와 통신을 하기 위한 소켓 핸들
+	LoginData login_info;  // 마지막 로그인에 사용한 계정 저장
+
+	FP_USER_MSG_CLIENT p_user_msg_func; // 서버가 전송한 메시지를 처리할 함수의 주소
+	FP_EVENT_STR_CLIENT p_event_func;   // 이벤트 로그를 처리할 함수의 주소
+	FP_CLIENT_NOTIFY p_notify_func;    // 클라이언트 상태 통보용 함수의 주소
+};
+
+namespace TW_NeoClientSocket
+{
+	void InitData(NeoSocketData *ap_data, FP_USER_MSG_CLIENT ap_user_msg_func, FP_EVENT_STR_CLIENT ap_event_func, FP_CLIENT_NOTIFY ap_notify_func, int a_key = 0x29);  // 클라이언트 서비스의 정보를 초기화한다.
+	void DestroySocket(NeoSocketData *ap_data);  // 사용중인 클라이언트 소켓을 제거하는 함수
+	void CleanUpClientData(NeoSocketData *ap_data);  // 클라이언트 서비스를 위해 생성했던 정보를 제거하는 함수
+	void ConnectToServer(NeoSocketData *ap_data, const char *ap_ip_address, int a_port); // 서버에 접속을 시도하는 함수
+	// 서버로 데이터를 전송하는 함수, (6바이트 프레임 구성 : "[ Key(1), Message ID(1), Body size(4)] +  Body Data")
+	void SendFrameData(NeoSocketData *ap_socket_data, UINT8 a_msg_id, const void *ap_data, UINT32 a_size);
+	void ProcessConnectionResult(NeoSocketData *ap_data, int a_error_code); // 서버 접속 결과를 처리하는 함수
+
+	// 수신된 데이터가 프로토콜 형식에 맞는지 그리고 완전히 수신되었는지 진행하는 함수
+	int ProcessingMessage(NeoSocketData *ap_data, UINT8 *ap_recv_data, int a_recv_size);
+	// 소켓에 발생하는 이벤트를 처리하는 함수
+	void ProcessSocketEvent(NeoSocketData *ap_data, int a_event_type);
 }
 
 extern const char *gp_app_name;
