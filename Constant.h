@@ -49,13 +49,13 @@ enum Action {
 
 // 타이머 아이디
 #define T_FRAME     2000    // 프레임
-#define T_LOCKDELAY 2001    // 테트로미노 잠금
+#define T_LOCKDELAY 2001    // 테트로미노 잠금 딜레이
 
 // 표준 크기
 #define TETROMINO_SIZE (30)    // 테트리미노 크기(pixel)
-#define FIELD_X_NUM    (10)    // 가로 크기
+#define FIELD_X_NUM    (10)    // 가로 크기(개수)
 #define LINE_INFO       (1)    // 각 줄에 대한 정보
-#define FIELD_Y_NUM    (20)    // 세로 크기
+#define FIELD_Y_NUM    (20)    // 세로 크기(개수)
 #define BUFFERZONE     (20)    // 버퍼존(위쪽 여유 공간)
 #define CHANCE         (10)    // 땅에 닿고 움직일 수 있는 횟수
 
