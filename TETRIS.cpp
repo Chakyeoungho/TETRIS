@@ -23,17 +23,18 @@ typedef struct _TetrominoData {
 // 게임 데이터
 typedef struct _GameData {
 	BYTE playfield[FIELD_Y_NUM + BUFFERZONE][FIELD_X_NUM + LINE_INFO];    // 플레이 필드
-	TetrominoData tetData;        // 테트로미노 데이터 구조체
-	WORD gameState;               // 현재 게임 상태
-	ULONGLONG gameScore;          // 게임 점수
-	BYTE gameLevel;               // 게임 레벨
-	WORD tetLockTime;             // 테트로미노 잠금 시간
-	BYTE chance;                  // 땅에 닿고 나서 움직이면 시간 초기화 되는 횟수
-	BYTE Action;                  // Action
-	bool isLastSpin;              // 마지막에 스핀으로 끝났는지
-	bool tetLock;                 // 테트로미노 잠금 타이머가 실행 됐는지
-	bool isHold;                  // 홀드를 한번 썼는지
-	void *tetromino_image[15];    // 테트로미노 이미지
+	TetrominoData tetData;          // 테트로미노 데이터 구조체
+	WORD gameState;                 // 현재 게임 상태
+	ULONGLONG gameScore;            // 게임 점수
+	ULONGLONG totalcClearedLine;    // 총 지워진 줄 개수
+	BYTE gameLevel;                 // 게임 레벨
+	WORD tetLockTime;               // 테트로미노 잠금 시간
+	BYTE chance;                    // 땅에 닿고 나서 움직이면 시간 초기화 되는 횟수
+	BYTE Action;                    // Action
+	bool isLastSpin;                // 마지막에 스핀으로 끝났는지
+	bool tetLock;                   // 테트로미노 잠금 타이머가 실행 됐는지
+	bool isHold;                    // 홀드를 한번 썼는지
+	void *tetromino_image[15];      // 테트로미노 이미지
 } GameData, *pGameData;
 
 // 함수 선언
@@ -226,8 +227,9 @@ int OnUserMsg(HWND ah_wnd, UINT a_message_id, WPARAM wParam, LPARAM lParam)
 		if (wParam == 'R') {    // 다시 시작
 			p_data->gameState = PLAYGAME;
 			sndPlaySound(".\\Sound\\Tetris_theme.wav", SND_ASYNC | SND_LOOP);    // 음악 재생
-			p_data->gameScore = 0;    // 게임 점수 초기화
-			p_data->gameLevel = 1;    // 게임 레벨 초기화
+			p_data->gameScore = 0;          // 게임 점수 초기화
+			p_data->gameLevel = 1;          // 점수 초기화
+			p_data->totalcClearedLine = 0;  // 총 지워진 줄 개수 초기화
 			memset(p_data->playfield, M_Tet, sizeof(BYTE) * (FIELD_Y_NUM + BUFFERZONE) * (FIELD_X_NUM + LINE_INFO));    // 플레이 필드 M_Tet로 초기화
 			// x좌표 끝줄은 줄이 꽉 찼는지 확인하는 용도로 가로의 크기로 초기화
 			for (int y = 0; y < FIELD_Y_NUM + BUFFERZONE; y++) {
@@ -277,7 +279,7 @@ int main()
 
 	GameData data = { { { 0, }, }, 
 		{ M_Tet, { { 0, }, }, { 0, }, M_Tet, { { 0, }, }, { 3, BUFFERZONE }, 0 }, 
-		PLAYGAME, 0, 1, 0, 0, Nothing, false, true, false, { 0, } };
+		PLAYGAME, 0, 0, 1, 0, 0, Nothing, false, true, false, { 0, } };
 	SetAppData(&data, sizeof(GameData));
 
 	pGameData ap_data = (pGameData)GetAppData();
@@ -437,7 +439,6 @@ void cascade(pGameData p_data)
 {
 	int moveLine;
 	int clearedLine = 0;
-	static int totalcClearedLine = 0;
 
 	for (int y = 4; y < FIELD_Y_NUM + BUFFERZONE; y++) {
 		if (p_data->playfield[y][FIELD_X_NUM] == 0) {
@@ -475,9 +476,9 @@ void cascade(pGameData p_data)
 		break;
 	}
 
-	totalcClearedLine += clearedLine;
-	if (totalcClearedLine / 10 >= 15) p_data->gameLevel = 15;
-	else p_data->gameLevel = (totalcClearedLine / 10) + 1;
+	p_data->totalcClearedLine += clearedLine;
+	if (p_data->totalcClearedLine / 10 >= 15) p_data->gameLevel = 15;
+	else p_data->gameLevel = (p_data->totalcClearedLine / 10) + 1;
 }
 
 // 테트리스 데이터 설정

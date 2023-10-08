@@ -7,7 +7,7 @@
 // 제작자 : 김성엽 (tipsware@naver.com, https://blog.naver.com/tipsware, https://cafe.naver.com/easywin32)
 //
 // 개발 시작 : 2019년 9월 3일 화요일
-// 최근 업데이트 : 2023년 4월 3일 월요일 (소켓 관련 업데이트, 정형님 생일에 맞춰서 업데이트 하네요. 생일 축하합니다.)
+// 최근 업데이트 : 2023년 6월 19일 월요일
 //
 // 이 라이브러리의 저작권은 '(주)팁스웨어'에 있습니다.
 // 이 라이브러리는 C 언어를 공부하는 사람들을 위해 만들어졌습니다.
@@ -17,12 +17,22 @@
 // https://blog.naver.com/tipsware/221552898585
 // 여러분의 작은 관심이 개발에 큰 힘이 됩니다. 감사합니다!!
 
+#define RGB24(r,g,b) (0xFF000000 | ((r) << 16) | ((g) << 8) | (b))   // 0xFFRRGGBB
+#define RGB32(a,r,g,b) (((a) << 24) | ((r) << 16) | ((g) << 8) | (b))  // 0xAARRGGBB
 
 typedef void (*FP_MOUSE_MSG)(int a_mixed_key, POINT a_pos);
 typedef void (*FP_COMMAND)(INT32 a_ctrl_id, INT32 a_notify_code, void *ap_ctrl);
 typedef void (*FP_DESTROY)();
 typedef int (*FP_USER_MESSAGE)(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-  
+ 
+typedef struct UserImageInformation // 프로그램에서 사용할 내부 데이터
+{
+	HDC h_mem_dc; // 이미지를 출력할 때사용할 메모리 DC 
+	HBITMAP h_mem_bmp; // 사용자가 사용할 비트맵
+	int bmp_cx, bmp_cy; // 이미지의 폭과 높이
+	UINT8 *p_raw_data; // 이미지 패턴의 주소를 기억할 포인터
+} UII;
+
 struct TargetData
 {
 	HWND h_wnd, h_base_wnd;
@@ -386,6 +396,19 @@ namespace EasyAPI_Tipsware
 	// 이미지 전송을 확인하는 창을 체크해서 전송 버튼을 눌러주는 함수
 	HWND CheckSendImageDlg();
 
+	// RSB 컨트롤 관련 함수
+	void RSB_ChangeCtrlPos(void *ap_rsb, int a_left, int a_top, int a_right, int a_bottom);
+	void RSB_ChangeCtrlName(void *ap_rsb, wchar_t a_icon_code, const char *ap_cap_name);
+	void RSB_ChangeCtrlColor(void *ap_rsb, COLORREF a_border_color, COLORREF a_fill_color, COLORREF a_text_color, COLORREF a_icon_color);
+	void RSB_ChangeCtrlFont(void *ap_rsb, UINT8 a_icon_font_size, UINT8 a_cap_font_size, UINT8 a_is_icon_font_bold,
+		UINT8 a_is_cap_font_bold, char *ap_icon_font_name, char *ap_cap_font_name);
+	void RSB_ChangeCtrlLayout(void *ap_rsb, UINT8 a_r_cx, UINT8 a_r_cy, UINT8 a_sp_pos, UINT8 a_cap_interval);
+	void *CreateRSB(int a_left, int a_top, int a_right, int a_bottom, wchar_t a_icon_code, const char *ap_cap_name, int a_ctrl_id);
+	void DestroyRSB(void *ap_rsb);
+	void RSB_DrawCtrl(void *ap_rsb, UINT8 a_is_push);
+	int RSB_IsClickedCtrl(void *ap_rsb, int a_x, int a_y);
+	void RSB_SendCommandMessage(void *ap_rsb);
+
 	// 클립보드 관련 함수
 	int CopyTextToClipboard(const char *ap_string);
 	int CopyTextFromClipboard(char **ap_string, char a_is_clear);
@@ -433,6 +456,73 @@ namespace EasyAPI_Tipsware
 	// 유니코드 문자열을 일반 아스키 문자열로 변경하는 함수
 	int UnicodeToAscii(char **ap_dest_str, const wchar_t *ap_src_str);
 	int UnicodeToSimpleAscii(char *ap_dest_str, const wchar_t *ap_src_str);
+
+	// 지정한 위치를 캡쳐해서 모자이크 이미지를 구성하는 함수
+	void MakeMosaicImage(POINT *ap_start_pos, UII *ap_image_info);
+	// 사용자가 직접 관리하는 이미지 정보를 만드는 함수
+	void CreateUserImage(int a_cx, int a_cy, UII *ap_image_info);
+	// 사용자가 직접 관리하는 이미지 정보를 제거하는 함수
+	void DestroyUserImage(UII *ap_image_info);
+	// 사용자가 직접 관리하는 이미지 정보를 화면에 출력하는 함수
+	void DrawUserImage(int a_x, int a_y, UII *ap_image_info);
+
+	// GDI Plus용 함수들
+	void *CreateDCP(int a_cx, int a_cy);  // 작업 영역을 지정해서 GDI Plus 객체를 생성하는 함수
+	void DestroyDCP(void *ap_dcp); // 생성된 GDI Plus 객체를 제거하는 함수
+	void ClearDCP(void *ap_dcp, DWORD a_color); // a_color로 전체 영역을 채운다.
+
+	// 사각형을 그리는 함수들
+	void RectangleDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey);  // 채우기와 테두리 같이 그림
+	void FillSolidRectDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey, DWORD a_color);  // 채우기만 함
+	void FillSolidRectDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey);  // 채우기만 함
+	void DrawRectDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey, DWORD a_color);  // 테두리만 그림
+	void DrawRectDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey); // 테두리만 그림
+
+	// 타원을 그리는 함수들
+	void EllipseDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey);  // 채우기와 테두리 같이 그림
+	void FillSolidEllipseDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey, DWORD a_color); // 채우기만 함
+	void FillSolidEllipseDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey); // 채우기만 함
+	void DrawEllipseDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey, DWORD a_color); // 테두리만 그림
+	void DrawEllipseDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey); // 테두리만 그림
+
+	// 선을 그리는 함수들
+	void DrawLineDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey, DWORD a_color);  // 시작, 끝을 사용해서 선그리기
+	void DrawLineDCP(void *ap_dcp, int a_sx, int a_sy, int a_ex, int a_ey);  // 시작, 끝을 사용해서 선그리기
+	void MoveToDCP(void *ap_dcp, int a_x, int a_y);  // 선의 시작 위치를 지정
+	void LineToDCP(void *ap_dcp, int a_x, int a_y);  // MoveTo 또는 마지막 LineTo를 사용한 지점과 선을 연결
+	void DrawArcDCP(void *ap_dcp, float a_x, float a_y, float a_cx, float a_cy, float a_start_angle, float a_sweep_angle); // Arc의 테두리를 그리는 함수
+
+	// 다각형을 그리는 함수들
+	void FillPolygonDCP(void *ap_dcp, void *ap_pos_list, int a_count); // 속이 채워지는 다각형을 그리는 함수
+	void DrawPolygonDCP(void *ap_dcp, void *ap_pos_list, int a_count); // 다각형의 테두리를 그리는 함수
+	void DrawLinesDCP(void *ap_dcp, void *ap_pos_list, int a_count); // 멀티 라인을 그리는 함수
+
+	void SetDCBrushColorDCP(void *ap_dcp, DWORD a_color);  // 채우기 색상을 변경
+	void SetDCPenColorDCP(void *ap_dcp, DWORD a_color);  // 선 색상을 변경
+	void SetDCPenColorDCP(void *ap_dcp, int a_style, float a_width, DWORD a_color);  // 선 스타일, 굵기 그리고 선 색상 변경
+	void SetTextColorDCP(void *ap_dcp, DWORD a_color);  // 글꼴의 색상을 변경
+	void *SelectObjectDCP(void *ap_dcp, void *ap_font);  // 폰트 객체를 다시 설정한다.
+
+	void DrawDCP(void *ap_dcp, void *ap_image, int a_x, int a_y);  // 전달된 이미지 객체를 출력
+	void DrawDCP(void *ap_dcp, void *ap_image, int a_x, int a_y, int a_cx, int a_cy); // 전달된 이미지 객체를 출력
+	void DrawDCP(void *ap_dcp, HDC ah_dc, int a_x = 0, int a_y = 0);  // 전달된 DC에 현재 이미지를 출력
+	void DrawDCP(void *ap_dcp, int a_x = 0, int a_y = 0);  // 전달된 DC에 현재 이미지를 출력
+
+	// 문자열을 지정한 위치에 출력하는 함수들
+	void TextOutDCP(void *ap_dcp, int a_x, int a_y, DWORD a_color, const wchar_t *ap_str, int a_str_len);
+	void TextOutDCP(void *ap_dcp, int a_x, int a_y, const wchar_t *ap_str, int a_str_len);
+
+	void *CreateThumbnailImageDCP(void *ap_dcp, void *ap_image, int a_cx, int a_cy);
+	void DeleteImageDCP(void *ap_image);
+
+	// 내부 보호 멤버의 값을 외부에서 사용할 수 있게 해주는 함수들
+	void *GetImageDCP(void *ap_dcp);
+	void *GetGraphicsDCP(void *ap_dcp);
+
+	// 지정한 DC에 연결된 글꼴에서 사용 가능한 문자의 목록을 얻는 함수
+	// 이 함수는 ap_char_list에 동적으로 메모리를 할당해서 전달하기 때문에 
+	// 사용 후에 ap_char_list가 가리키는 메모리를 반드시 해제해야 한다
+	int GetUseUnicodeCharListInFont(wchar_t **ap_char_list, HDC ah_base_dc);
 
 	// 리다이렉션 관련 함수
 	void *CreateRedirectionData();  // 리다이렉션을 사용하기 위해 필요한 데이터를 만드는 함수
